@@ -54,3 +54,9 @@ restart
 phase third
 docker exec "$net-desk" sh -c '[ ! -e /data/location.txt ] && [ -e /data/cent-aur.db ] && [ ! -e /data/moved/cent-aur.db ]' \
   && echo "ok    back in the standard folder: the data is there again and nothing is left behind" || echo "FAIL  back in the standard folder: the data is there again and nothing is left behind"
+docker exec "$net-desk" sh -c 'grep -q "\"forget\": true" /data/settings.json && ! grep -q "\"cookie\"" /data/settings.json' \
+  && echo "ok    without Remember me, the sign-in is not written to disk" || echo "FAIL  without Remember me, the sign-in is not written to disk"
+[ "$(docker exec "$net-web" php -r '$p=new PDO("sqlite:/var/www/cent-aur-data/cent-aur.db"); echo $p->query("select count(*) from sessions")->fetchColumn();')" = 1 ] && echo "ok    the server has the sign-in while the app is open" || echo "FAIL  the server has the sign-in while the app is open"
+restart
+phase fourth
+[ "$(docker exec "$net-web" php -r '$p=new PDO("sqlite:/var/www/cent-aur-data/cent-aur.db"); echo $p->query("select count(*) from sessions")->fetchColumn();')" = 0 ] && echo "ok    closing the app ended the sign-in on the server" || echo "FAIL  closing the app ended the sign-in on the server"

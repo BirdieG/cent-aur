@@ -43,7 +43,7 @@ func main() {
 		alert("Cent-aur cannot open its folder:\n\n" + err.Error())
 		return
 	}
-	address, err := start(base, dir)
+	address, app, err := start(base, dir)
 	if err != nil {
 		alert("Cent-aur cannot start:\n\n" + err.Error())
 		return
@@ -76,6 +76,7 @@ func main() {
 	}
 	w.Navigate(address)
 	w.Run()
+	app.Close()
 }
 
 // titleBar colours the window's title bar: dark or light on Windows 10, the exact colours on Windows 11

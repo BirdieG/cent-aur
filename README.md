@@ -99,8 +99,9 @@ container and disappears when you stop it.
 [`desktop/`](desktop) builds **`Cent-aur.exe`**, a single program for Windows 10 and 11 (about 12 MB,
 nothing to install). It opens the same Cent-aur page in its own window and starts with a choice:
 
-- **Sign in:** use your account on your Cent-aur server, exactly as on the website. The sign-in is
-  remembered (encrypted for your Windows user), so the next start goes straight to your data.
+- **Sign in:** use your account on your Cent-aur server, exactly as on the website. With **Remember me**
+  ticked (the default) the sign-in is kept, encrypted for your Windows user, so the next start goes
+  straight to your data. Unticked, it is never written to disk and ends when you close the app.
 - **Work offline on this PC:** no account and no internet needed; the data is kept in a SQLite
   database in `%APPDATA%\Cent-aur` on this PC only. **Options → Data folder** moves it (with the
   app's settings) to another folder, such as another drive, and back.

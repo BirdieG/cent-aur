@@ -42,6 +42,7 @@ type Config struct {
 	Mode   string // "" (not chosen yet), "online" or "offline"
 	Server string // the Cent-aur server, once signed in
 	Cookie string // that server's sign-in (its ca_session cookie)
+	Forget bool   // "Remember me" was off: the sign-in is kept in memory only and ends when the app closes
 }
 
 // configFile is Config as stored: the sign-in is encrypted for this Windows user (see protect_windows.go).
@@ -49,6 +50,7 @@ type configFile struct {
 	Mode   string `json:"mode"`
 	Server string `json:"server,omitempty"`
 	Cookie string `json:"cookie,omitempty"`
+	Forget bool   `json:"forget,omitempty"`
 }
 
 type App struct {
@@ -97,7 +99,7 @@ func (a *App) load() {
 	if json.Unmarshal(raw, &f) != nil {
 		return
 	}
-	a.cfg = Config{Mode: f.Mode, Server: f.Server}
+	a.cfg = Config{Mode: f.Mode, Server: f.Server, Forget: f.Forget}
 	if b, err := base64.StdEncoding.DecodeString(f.Cookie); err == nil && len(b) > 0 {
 		if plain, err := unprotect(b); err == nil {
 			a.cfg.Cookie = string(plain)
@@ -134,8 +136,8 @@ func (a *App) update(change func(*Config)) error {
 
 // save writes the settings to the data folder; a.mu is held.
 func (a *App) save() error {
-	f := configFile{Mode: a.cfg.Mode, Server: a.cfg.Server}
-	if a.cfg.Cookie != "" {
+	f := configFile{Mode: a.cfg.Mode, Server: a.cfg.Server, Forget: a.cfg.Forget}
+	if a.cfg.Cookie != "" && !a.cfg.Forget {
 		enc, err := protect([]byte(a.cfg.Cookie))
 		if err != nil {
 			return err
@@ -226,7 +228,7 @@ func (a *App) desktop() map[string]any {
 		server = defaultServer
 	}
 	dir := a.folder()
-	return map[string]any{"mode": cfg.Mode, "server": server, "autostart": autostartEnabled(dir),
+	return map[string]any{"mode": cfg.Mode, "server": server, "remember": !cfg.Forget, "autostart": autostartEnabled(dir),
 		"folder": dir, "standard": samePath(dir, a.base), "picker": pickFolder != nil}
 }
 
@@ -258,7 +260,10 @@ func (a *App) session(w http.ResponseWriter) {
 
 // login signs in to a Cent-aur server; from then on the page's requests go there.
 func (a *App) login(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Server, Username, Password string }
+	var in struct {
+		Server, Username, Password string
+		Remember                   *bool // missing = remember
+	}
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&in) != nil {
 		fail(w, http.StatusBadRequest, "Bad request.")
 		return
@@ -294,12 +299,33 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadGateway, msgNotCentaur)
 		return
 	}
-	if err := a.update(func(c *Config) { *c = Config{Mode: "online", Server: server, Cookie: cookie} }); err != nil {
+	forget := in.Remember != nil && !*in.Remember
+	if err := a.update(func(c *Config) { *c = Config{Mode: "online", Server: server, Cookie: cookie, Forget: forget} }); err != nil {
 		fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	j["desktop"] = a.desktop()
 	send(w, http.StatusOK, j)
+}
+
+// Close runs when the app closes: a sign-in that is not remembered is also ended on the server.
+// It waits at most a few seconds, so a slow server never keeps the program running.
+func (a *App) Close() {
+	cfg := a.config()
+	if cfg.Mode != "online" || !cfg.Forget || cfg.Cookie == "" {
+		return
+	}
+	done := make(chan struct{})
+	go func() {
+		if resp, err := a.remote(http.MethodPost, cfg.Server, "logout", []byte("{}"), cfg.Cookie); err == nil {
+			resp.Body.Close()
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+	}
 }
 
 // serverAddress accepts "cent-aur.example.com", "https://cent-aur.example.com/" and the like.

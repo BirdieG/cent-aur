@@ -54,15 +54,15 @@ func dataDir() (base, dir string, err error) {
 }
 
 // start runs the app's own server on a free port of this PC only, and returns the address the
-// window opens. CENTAUR_PORT fixes the port (used by the tests).
-func start(base, dir string) (string, error) {
+// window opens, and the app (to Close when the window closes). CENTAUR_PORT fixes the port (used by the tests).
+func start(base, dir string) (string, *App, error) {
 	web, err := fs.Sub(webFiles, "web")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	app, err := NewApp(base, dir, web)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	port := os.Getenv("CENTAUR_PORT")
 	if port == "" {
@@ -70,9 +70,9 @@ func start(base, dir string) (string, error) {
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:"+port)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	app.host = ln.Addr().String()
 	go http.Serve(ln, app)
-	return "http://" + app.host + "/?t=" + app.token, nil
+	return "http://" + app.host + "/?t=" + app.token, app, nil
 }

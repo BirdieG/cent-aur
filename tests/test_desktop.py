@@ -3,7 +3,9 @@
 The app is restarted between phases, so each phase also checks what it remembers:
   first     the first screen, Start with Windows, working offline, only its own window gets in, moving the data folder
   second    offline data and data folder kept; switching to sign in; sign-in mistakes; first sign-in through the app
-  third     still signed in; managing users through the app; signing out; offline data kept apart; data folder back
+  third     still signed in; managing users through the app; signing out; offline data kept apart; data folder back;
+            signing in again with Remember me off
+  fourth    not remembered: straight to Sign in, Remember me still off, and the server's sign-in was ended
 """
 import os, sys, urllib.request, urllib.error
 from playwright.sync_api import sync_playwright
@@ -106,6 +108,7 @@ with sync_playwright() as pw:
         page.click("#fmo")
         form_title(page, "Sign in")
         check(page.input_value("#fm_srv") == SERVER, "sign-in offers the server built into the app: %s" % page.input_value("#fm_srv"))
+        check(page.is_checked("#fm_rem"), "Remember me is ticked at first")
 
         page.fill("#fm_srv", "http://nowhere.invalid"); page.fill("#fm_u", "admin"); page.fill("#fm_p", "admin"); page.click("#fmo")
         page.wait_for_selector("#fme:not([hidden])")
@@ -152,6 +155,23 @@ with sync_playwright() as pw:
         page.wait_for_function("document.querySelector('#ddp') && document.querySelector('#ddp').textContent === '/data'")
         page.wait_for_function("document.querySelector('#sec') && document.querySelector('#sec').textContent.includes('Offline coffee')")
         check(True, "back to the standard folder, with the data")
+
+        page.click('[data-ac="leave"]')
+        page.wait_for_selector("#dlg:not([hidden])")
+        page.click("#dlgy")
+        form_title(page, "Welcome to Cent-aur")
+        page.click("#fmo")
+        form_title(page, "Sign in")
+        page.fill("#fm_srv", SERVER); page.fill("#fm_u", "admin"); page.fill("#fm_p", "adminpass123"); page.uncheck("#fm_rem"); page.click("#fmo")
+        page.wait_for_selector("#fmm", state="hidden")
+        page.wait_for_function("document.querySelector('#sec') && document.querySelector('#sec').textContent.includes('Online rent')")
+        check(True, "signed in with Remember me off")
+
+    elif phase == "fourth":
+        form_title(page, "Sign in")
+        check(True, "restarted without Remember me: straight to Sign in")
+        check(page.input_value("#fm_srv") == SERVER, "the server address is still filled in")
+        check(not page.is_checked("#fm_rem"), "Remember me stays off, as chosen last time")
 
     check(not errors, "no script errors: %s" % errors)
     browser.close()

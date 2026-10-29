@@ -1169,22 +1169,24 @@ function accStatusUI(){var u=ACC.user;if(u)$("ach").innerHTML=(deskOffline()?esc
 var FM=null;
 function fmClose(){$("fmm").hidden=true;$("fmm").classList.remove("lock","boot");FM=null}
 function fmOpen(o){FM=o;$("fmt").textContent=o.title;$("fmi").textContent=o.intro||"";$("fmi").hidden=!o.intro;$("fme").hidden=true;
-  $("fmb").innerHTML=o.fields.map(function(f){return '<label>'+esc(f.label)+'<input id="fm_'+f.id+'" type="'+(f.type||"text")+'" value="'+esc(f.value||"")+'"'+(f.ph?' placeholder="'+esc(f.ph)+'"':'')+(f.auto?' autocomplete="'+f.auto+'"':' autocomplete="off"')+(f.name?' name="'+f.name+'"':'')+' maxlength="200" required></label>'}).join("");
+  $("fmb").innerHTML=o.fields.map(function(f){if(f.type==="checkbox")return '<label class="oc"><input id="fm_'+f.id+'" type="checkbox"'+(f.value?' checked':'')+'> '+esc(f.label)+'</label>';
+    return '<label>'+esc(f.label)+'<input id="fm_'+f.id+'" type="'+(f.type||"text")+'" value="'+esc(f.value||"")+'"'+(f.ph?' placeholder="'+esc(f.ph)+'"':'')+(f.auto?' autocomplete="'+f.auto+'"':' autocomplete="off"')+(f.name?' name="'+f.name+'"':'')+' maxlength="200" required></label>'}).join("");
   $("fma").innerHTML=(o.lock?'':'<button type="button" class="ghost" id="fmc">'+esc(X("Cancel","Άκυρο"))+'</button>')+(o.alt?'<button type="button" id="fma2">'+esc(o.alt.text)+'</button>':'')+'<button type="submit" class="primary" id="fmo">'+esc(o.ok)+'</button>';
   $("fmm").classList.toggle("lock",!!o.lock);$("fmm").classList.remove("boot");$("fmm").hidden=false;
   var c=$("fmc");if(c)c.addEventListener("click",function(){var f=FM;fmClose();if(f&&f.onCancel)f.onCancel()});
   var a2=$("fma2");if(a2)a2.addEventListener("click",function(){var f=FM;fmClose();f.alt.fn()});
   var first=$("fmb").querySelector("input");if(first)first.focus();else $("fmo").focus()}
 function fmErr(m){var e=$("fme");e.textContent=T(m);e.hidden=false}
-$("fmf").addEventListener("submit",function(e){e.preventDefault();if(!FM)return;var o=FM,v={};o.fields.forEach(function(f){v[f.id]=$("fm_"+f.id).value});
+$("fmf").addEventListener("submit",function(e){e.preventDefault();if(!FM)return;var o=FM,v={};o.fields.forEach(function(f){var el=$("fm_"+f.id);v[f.id]=f.type==="checkbox"?el.checked:el.value});
   var b=$("fmo");b.disabled=true;$("fme").hidden=true;
   Promise.resolve().then(function(){return o.onOk(v)}).then(function(){if(FM===o)fmClose()},function(er){fmErr(er&&er.message||X("Something went wrong.","Κάτι πήγε στραβά."))}).then(function(){b.disabled=false})});
 $("fmm").addEventListener("click",function(e){if(e.target===this&&FM&&!FM.lock){var f=FM;fmClose();if(f.onCancel)f.onCancel()}});
 // ---- sign in, and the forced new password after signing in with the default one
 function accLogin(msg){var f=[{id:"u",label:X("User name","Όνομα χρήστη"),auto:"username",name:"username"},{id:"p",label:X("Password","Κωδικός"),type:"password",auto:"current-password",name:"password"}];
-  if(DESK)f.unshift({id:"srv",label:X("Server address","Διεύθυνση διακομιστή"),ph:"https://cent-aur.example.com",value:DESK.server||"",auto:"url",name:"server"});
+  if(DESK){f.unshift({id:"srv",label:X("Server address","Διεύθυνση διακομιστή"),ph:"https://cent-aur.example.com",value:DESK.server||"",auto:"url",name:"server"});
+    f.push({id:"rem",type:"checkbox",label:X("Remember me","Να με θυμάσαι"),value:DESK.remember!==false})}   // off: signed out when the app closes
   fmOpen({title:X("Sign in","Σύνδεση"),fields:f,ok:X("Sign in","Σύνδεση"),lock:true,alt:DESK?{text:X("Back","Πίσω"),fn:function(){accChoose()}}:null,
-    onOk:function(v){var b={username:v.u.trim(),password:v.p};if(DESK)b.server=v.srv.trim();
+    onOk:function(v){var b={username:v.u.trim(),password:v.p};if(DESK){b.server=v.srv.trim();b.remember=v.rem}
       return api("/api/login",{method:"POST",body:JSON.stringify(b)}).then(function(j){if(j.desktop){DESK=j.desktop;deskUI()}accStart(j.user)},function(e){
       if(e.status===undefined)throw new Error(X("The server could not be reached. Check your connection.","Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε τη σύνδεσή σας."));throw e})}});
   if(msg)fmErr(msg)}
@@ -1300,7 +1302,7 @@ $("acb").addEventListener("click",function(e){var b=e.target.closest("[data-ac]"
 function accBoot(){
   // the page's <head> already asked for the session and the data in one go, while this script was loading
   var b=window.BOOT;window.BOOT=null;
-  (b?apiRes(b):api("/api/session")).then(function(j){DESK=j.desktop||null;deskUI();if(j.user)accStart(j.user,"data" in j?j:null);else if(DESK)accChoose();else accLogin()},
+  (b?apiRes(b):api("/api/session")).then(function(j){DESK=j.desktop||null;deskUI();if(j.user)accStart(j.user,"data" in j?j:null);else if(DESK&&DESK.mode!=="online")accChoose();else accLogin()},
     function(e){DESK=e.data&&e.data.desktop||null;deskUI();var m=T(e.data&&e.data.error||"")||X("The server could not be reached. Check your connection.","Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε τη σύνδεσή σας.");if(DESK)accChoose(m);else accLogin(m)})}
 
 

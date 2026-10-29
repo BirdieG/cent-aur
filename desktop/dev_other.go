@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 )
 
 func main() {
@@ -18,12 +20,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	address, err := start(base, dir)
+	address, app, err := start(base, dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(address)
-	select {}
+	// stopping the program (Ctrl+C, docker stop) is closing the window
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+	app.Close()
 }
 
 func autostartEnabled(dir string) bool {
