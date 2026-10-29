@@ -25,7 +25,7 @@ rm -rf "$root/desktop/web" && mkdir -p "$root/desktop/web"
 for f in index.html app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$root/desktop/web/"; done
 docker volume create centaur-go-cache >/dev/null
 docker run --rm -v "$root:/src" -v centaur-go-cache:/go -w /src/desktop -e OWNER="$(id -u):$(id -g)" golang:1.26 sh -c "
-  CGO_ENABLED=0 go build -ldflags '-X main.defaultServer=http://$net-web' -o dist/cent-aur-test . && chown -R \$OWNER dist web"
+  CGO_ENABLED=0 go build -buildvcs=false -ldflags '-X main.defaultServer=http://$net-web' -o dist/cent-aur-test . && chown -R \$OWNER dist web"
 docker run -d --name "$net-desk" --network "$net" -v "$root/desktop/dist:/app:ro" -v "$net-data:/data" \
   -e CENTAUR_DIR=/data -e CENTAUR_PORT=47800 golang:1.26 /app/cent-aur-test >/dev/null
 
