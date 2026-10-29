@@ -1,0 +1,25 @@
+# Local settings: may contain server-specific values
+public/config.php
+
+# Data: databases, backups and the password-reset file never belong in the repository
+cent-aur-data/
+*.db
+*.db-wal
+*.db-shm
+reset-admin.txt
+
+# Tool output
+.playwright-mcp/
+__pycache__/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Desktop app: build output (desktop/build.sh makes these)
+desktop/web/
+desktop/dist/
+desktop/rsrc_windows_*.syso

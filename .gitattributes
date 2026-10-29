@@ -1,0 +1,4 @@
+# Text files are stored with LF line endings, so shell scripts and .htaccess work on the server
+* text=auto eol=lf
+*.png binary
+*.webp binary

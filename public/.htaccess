@@ -1,0 +1,22 @@
+# Sends every /api/... address to api.php (needs Apache mod_rewrite, standard on Virtualmin)
+# MultiViews would answer /api/... with api.php itself before the rule below runs, so it is switched off
+Options -MultiViews
+RewriteEngine On
+RewriteRule ^api/ api.php [L,QSA]
+# Never show the settings file
+<Files "config.php">
+  Require all denied
+</Files>
+# Browser protection (needs mod_headers, standard on Virtualmin; skipped quietly if it is missing)
+<IfModule mod_headers.c>
+  # No other website may show Cent-aur inside a frame (stops click-tricks on the admin screen)
+  Header always set X-Frame-Options "DENY"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "same-origin"
+  # The page only talks to this server; pictures may also be built-in data: images
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+  # Always ask the server for these, so a new version is seen at once
+  <FilesMatch "^(index\.html|app\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
