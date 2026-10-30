@@ -696,6 +696,9 @@ function applyTheme(){
   try{localStorage.setItem("xpence-theme",JSON.stringify(t))}catch(e){}
   deskTitleBar(dark)}
 // the desktop app's window title bar takes the page's background and text colours (ceTitleBar is given to the page by the app)
+// links that open a new tab: in the desktop app they open in the PC's own browser instead
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[target="_blank"]');
+  if(a&&typeof window.ceOpen==="function"&&/^https:\/\//.test(a.href)){e.preventDefault();Promise.resolve(window.ceOpen(a.href)).catch(function(){})}});
 function deskTitleBar(dark){if(typeof window.ceTitleBar!=="function")return;
   var cs=getComputedStyle(document.body),c=function(s){var m=s.match(/\d+/g)||[0,0,0];return (+m[0])|(+m[1]<<8)|(+m[2]<<16)};   // Windows wants 0x00BBGGRR
   Promise.resolve(window.ceTitleBar(c(cs.backgroundColor),c(cs.color),dark)).catch(function(){})}
@@ -955,7 +958,7 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "Color theme":"Χρωματικό θέμα","Appearance":"Εμφάνιση","Automatic (system)":"Αυτόματο (σύστημα)","Light":"Φωτεινή","Dark":"Σκούρα","Custom":"Προσαρμοσμένο",
 "Green":"Πράσινο","Graphite":"Γραφίτης","Ocean":"Ωκεανός","Rose":"Ροζ","Sunset":"Ηλιοβασίλεμα","Violet":"Βιολετί",
 "I’m a freelancer (shows the Freelancer tab)":"Είμαι ελεύθερος επαγγελματίας (εμφανίζει την καρτέλα Ελεύθερος επαγγελματίας)",
-"Welcome to Cent-aur":"Καλώς ήρθατε στο Cent-aur","Every cent counts.":"Κάθε λεπτό μετράει.","Know where your money goes.":"Μάθετε πού πηγαίνουν τα χρήματά σας.",
+"Welcome to Cent-aur":"Καλώς ήρθατε στο Cent-aur","Every cent counts.":"Κάθε λεπτό μετράει.","Cent-aur on GitHub":"Το Cent-aur στο GitHub","Know where your money goes.":"Μάθετε πού πηγαίνουν τα χρήματά σας.",
 "Cent-aur logo":"Λογότυπο Cent-aur",
 "Personal":"Προσωπικά","Freelancer":"Ελεύθερος επαγγελματίας",
 "Newest first":"Πρώτα τα νεότερα","Oldest first":"Πρώτα τα παλαιότερα","Sort order":"Σειρά ταξινόμησης","OK":"Εντάξει","Enter an amount greater than 0.":"Εισαγάγετε ποσό μεγαλύτερο από 0.","Show full lists (no scrolling)":"Εμφάνιση πλήρων λιστών (χωρίς κύλιση)","Savings":"Αποταμιεύσεις","Insights":"Συμβουλές","Copy summary for AI":"Αντιγραφή σύνοψης για AI","Extra money":"Έκτακτα έσοδα","Totals":"Σύνολα","Budget":"Προϋπολογισμός","Add expense":"Προσθήκη εξόδου","Expenses":"Έξοδα","Bills history":"Ιστορικό λογαριασμών","By category":"Ανά κατηγορία","Your data":"Τα δεδομένα σας","Categories & bills":"Κατηγορίες & λογαριασμοί",

@@ -379,7 +379,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 .dlgo.lock{align-items:flex-start;padding-top:max(16px,calc(50vh - 300px))}
 .acw .ab{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.acw .ab button{padding:6px 12px}
 .acw .who{font-weight:600}.acw .ok{color:var(--accent)}.acw .off{color:var(--danger)}
-.fmw{width:min(430px,100%)}.fmw .scfm input{font-size:1rem}.scfm label.oc{display:flex;color:inherit;font-size:.95rem;margin-top:2px}.scfm input[type=checkbox]{width:auto}
+.fmw{width:min(430px,100%)}.fmw .scfm input{font-size:1rem}.ghl{display:flex;justify-content:center;margin:20px 0 0}.ghl a{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.85rem;text-decoration:none;border-radius:6px}.ghl a:hover{color:var(--accent);text-decoration:underline}#fmm:not(.lock) .ghl{display:none}.appf{margin:28px 0 8px}.scfm label.oc{display:flex;color:inherit;font-size:.95rem;margin-top:2px}.scfm input[type=checkbox]{width:auto}
 #fmf{display:block}/* the dialog form stacks its fields; the 4-column grid above is for the add-expense form */
 /* sign-in and first password: a full screen with the app's name above the form */
 .fmbr{display:none}.dlgo.lock .fmw{width:min(380px,100%);padding:28px 26px 24px}
@@ -387,7 +387,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 .fmbr img{border-radius:14px;margin-bottom:10px}.fmbn{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}.fmbn span{color:var(--accent)}.fmbt{color:var(--muted);font-size:.9rem}
 .dlgo.lock #fmt,.dlgo.lock #fmi{text-align:center}
 /* while starting: a splash with the logo over the page, until sign-in is shown or your data is loaded */
-.dlgo.boot #fmt,.dlgo.boot #fmi,.dlgo.boot #fmf{display:none}.dlgo.boot .fmbr{margin:0}
+.dlgo.boot #fmt,.dlgo.boot #fmi,.dlgo.boot #fmf,.dlgo.boot .ghl{display:none}.dlgo.boot .fmbr{margin:0}
 #netbar{z-index:98}.dlgo.lock .scfa{margin-top:16px;flex-direction:column-reverse}.dlgo.lock .scfa button{flex:1;padding-top:12px;padding-bottom:12px}
 .usrw{width:min(720px,100%)}.usrl{display:grid;gap:8px;margin:10px 0}
 .usrr{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
@@ -853,8 +853,9 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 </div>
 </div>
 </div>
+<footer class="ghl appf"><a href="https://github.com/BirdieG/cent-aur" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>Cent-aur on GitHub</span></a></footer>
 <div class="toast" id="toast" role="status" hidden></div>
-<div class="dlgo lock boot" id="fmm"><div class="scb fmw" role="dialog" aria-modal="true" aria-labelledby="fmt"><div class="fmbr"><img src="app-icons/logo.webp" width="64" height="64" alt=""><div class="fmbn" data-notr><span>Cent</span>-aur</div><div class="fmbt">Every cent counts.</div></div><h3 id="fmt" data-notr></h3><p class="hint" id="fmi" data-notr></p><form id="fmf" autocomplete="on"><div class="scfm" id="fmb"></div><p class="scwn" id="fme" hidden data-notr></p><div class="scfa" id="fma"></div></form></div></div>
+<div class="dlgo lock boot" id="fmm"><div class="scb fmw" role="dialog" aria-modal="true" aria-labelledby="fmt"><div class="fmbr"><img src="app-icons/logo.webp" width="64" height="64" alt=""><div class="fmbn" data-notr><span>Cent</span>-aur</div><div class="fmbt">Every cent counts.</div></div><h3 id="fmt" data-notr></h3><p class="hint" id="fmi" data-notr></p><form id="fmf" autocomplete="on"><div class="scfm" id="fmb"></div><p class="scwn" id="fme" hidden data-notr></p><div class="scfa" id="fma"></div></form><p class="ghl"><a href="https://github.com/BirdieG/cent-aur" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>Cent-aur on GitHub</span></a></p></div></div>
 <div class="dlgo" id="usrm" hidden><div class="scb usrw" role="dialog" aria-modal="true" aria-labelledby="usrt"><h3 id="usrt" data-notr></h3><p class="hint" id="usri" data-notr></p><div class="scfa" style="justify-content:flex-start;margin:0 0 6px" id="usrtop"></div><div class="usrl" id="usrl"></div><div class="scfa"><button type="button" class="ghost" id="usrx"></button></div></div></div>
 <div class="dlgo" id="dlg" hidden><div class="dlgb" role="alertdialog" aria-modal="true" aria-labelledby="dlgm"><p id="dlgm"></p><div class="dlga"><button type="button" class="ghost" id="dlgc">Cancel</button><button type="button" class="primary" id="dlgy">OK</button></div></div></div>
 </main>

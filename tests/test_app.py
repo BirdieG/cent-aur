@@ -77,6 +77,8 @@ with sync_playwright() as pw:
     held[0].continue_()
     S.wait_for_selector("#fmf", state="visible")
     check("Sign in" in S.text_content("#fmt"), "then the sign-in form takes its place")
+    gh = "https://github.com/BirdieG/cent-aur"
+    check(S.is_visible('#fmm .ghl a[href="%s"]' % gh), "the sign-in screen links to the code on GitHub")
     check(S.evaluate("getComputedStyle(document.documentElement).overflowY") == "hidden", "the page behind the sign-in screen cannot scroll (no scrollbar)")
     S.wait_for_timeout(500)
     ls = S.evaluate("window.__ls")
@@ -106,6 +108,7 @@ with sync_playwright() as pw:
     A.wait_for_selector("#fmm", state="hidden")
     A.wait_for_selector("#acw:not([hidden])")
     check("admin" in A.text_content("#ach"), "account block shows the admin")
+    check(A.get_attribute('.appf a', "href") == gh and A.get_attribute('.appf a', "target") == "_blank", "the bottom of the app links to the code on GitHub, in a new tab")
 
     # ---- foldable cards: the heading stays a heading, with a real button inside it (keyboard works once per key press)
     check(A.evaluate("document.querySelectorAll('h2[role]').length") == 0, "no heading pretends to be a button")

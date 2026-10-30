@@ -8,7 +8,7 @@ set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
 server=${1:-}
-version=2.0.1
+version=2.0.2
 
 # The program serves the page from inside itself: copy it from public/ (api.php stays out).
 rm -rf "$here/web"

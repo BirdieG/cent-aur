@@ -4,6 +4,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 	"unsafe"
 
 	"github.com/jchv/go-webview2"
@@ -65,6 +66,15 @@ func main() {
 	// the page calls this whenever its theme changes, so the title bar matches it
 	hwnd := uintptr(w.Window())
 	if err := w.Bind("ceTitleBar", func(bg, text int, dark bool) { titleBar(hwnd, uint32(bg), uint32(text), dark) }); err != nil {
+		alert("Cent-aur cannot start:\n\n" + err.Error())
+		return
+	}
+	// links to other websites (Cent-aur on GitHub) open in the PC's own browser, not in a second app window
+	if err := w.Bind("ceOpen", func(link string) {
+		if strings.HasPrefix(link, "https://") {
+			windows.ShellExecute(0, windows.StringToUTF16Ptr("open"), windows.StringToUTF16Ptr(link), nil, nil, 1) // SW_SHOWNORMAL
+		}
+	}); err != nil {
 		alert("Cent-aur cannot start:\n\n" + err.Error())
 		return
 	}
