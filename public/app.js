@@ -1159,7 +1159,8 @@ function accTime(ts){return new Date(ts).toLocaleTimeString(LANG==="el"?"el-GR":
 function accStatus(){if(ACC.err)return ACC.err;if(ACC.saving||ACC.dirty)return X("Saving…","Αποθήκευση…");return ACC.last?X("Saved at ","Αποθηκεύτηκε στις ")+accTime(ACC.last):""}
 // ---- the account block in "Your data", and the bar shown while the server cannot be reached
 function deskOffline(){return !!(DESK&&DESK.mode==="offline")}
-function accUI(){var w=$("acw");if(!w)return;var u=ACC.user;w.hidden=!u;if(!u)return;
+function accUI(){var w=$("acw");if(!w)return;var u=ACC.user;w.hidden=!u;
+  var v=$("appver");v.hidden=!(u&&u.version);v.textContent=u&&u.version?"v"+u.version:"";if(!u)return;
   $("act").textContent=deskOffline()?X("This PC","Αυτός ο υπολογιστής"):X("Account","Λογαριασμός");
   if(deskOffline()){$("acb").innerHTML='<button type="button" class="primary" data-ac="leave">'+esc(X("Sign in to a server","Σύνδεση σε διακομιστή"))+'</button>';accStatusUI();return}
   $("acb").innerHTML='<button type="button" data-ac="pw">'+esc(X("Change password","Αλλαγή κωδικού"))+'</button><button type="button" data-ac="out">'+esc(X("Sign out","Αποσύνδεση"))+'</button>'+

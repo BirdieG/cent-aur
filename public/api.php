@@ -9,7 +9,7 @@
  * back after every change. The first start creates the user "admin" with password "admin";
  * that password must be changed at the first sign-in.
  */
-$VERSION = '2.0.0';
+$VERSION = '2.0.2';
 $CFG = array(
     'data_dir'        => '',   // empty = a folder "cent-aur-data" next to the website folder (outside the web)
     'ip_header'       => '',   // 'HTTP_CF_CONNECTING_IP' when the Cloudflare orange cloud is on
@@ -159,7 +159,8 @@ function pw_problem($pw) {
     return null;
 }
 function user_ok($n) { return is_string($n) && preg_match('/^[A-Za-z0-9._@\-]{2,40}$/', $n); }
-function pub($u) { return array('id' => (int)$u['id'], 'username' => $u['username'], 'role' => $u['role'], 'must_change' => (bool)$u['must_change']); }
+// the version is only told to someone who is signed in; the page shows it at the bottom
+function pub($u) { global $VERSION; return array('id' => (int)$u['id'], 'username' => $u['username'], 'role' => $u['role'], 'must_change' => (bool)$u['must_change'], 'version' => $VERSION); }
 function user_for($tok) {
     global $CFG;
     if (!$tok) { return null; }

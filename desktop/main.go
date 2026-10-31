@@ -27,6 +27,9 @@ var webFiles embed.FS
 //	go build -ldflags "-X main.defaultServer=https://cent-aur.example.com"
 var defaultServer = ""
 
+// version is shown at the bottom of the page when working offline; build.sh sets it like defaultServer.
+var version = ""
+
 // dataDir returns the app's standard folder, %APPDATA%\Cent-aur on Windows (CENTAUR_DIR overrides it,
 // for the tests), and the folder holding the settings and the offline database. That is the standard
 // folder too, unless another one was chosen in Options: then location.txt in the standard folder names it.

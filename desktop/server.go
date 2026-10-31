@@ -232,7 +232,7 @@ func (a *App) desktop() map[string]any {
 		"folder": dir, "standard": samePath(dir, a.base), "picker": pickFolder != nil}
 }
 
-var offlineUser = map[string]any{"id": 0, "username": "This PC", "role": "user", "must_change": false}
+var offlineUser = map[string]any{"id": 0, "username": "This PC", "role": "user", "must_change": false, "version": version}
 
 func (a *App) session(w http.ResponseWriter) {
 	cfg := a.config()
