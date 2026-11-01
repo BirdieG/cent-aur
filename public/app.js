@@ -409,7 +409,9 @@ function clone(x){return JSON.parse(JSON.stringify(x))}
 function minIdx(items,fb){var m=Infinity;for(var k=0;k<items.length;k++){var x=idxOf(items[k].date);if(x<m)m=x}return m===Infinity?fb:m}
 function rowsFor(i){var c=RF[i];if(c)return c;var o=state.order==="old"?1:-1,srch=qToks.length;
   var r=state.items.filter(function(it){return dueIn(it,i)&&(!srch||qMatch(it,qToks,qLabel(it)))});
-  r.sort(function(a,b){var x=a.date.slice(8,10),y=b.date.slice(8,10);if(x!==y)return x<y?-o:o;var c1=(a.created||""),d=(b.created||"");return c1<d?-o:c1>d?o:0});
+  // same day and same "created" (it holds only the date): fall back to the order they were added in
+  var pos=new Map();state.items.forEach(function(it,k){pos.set(it,k)});
+  r.sort(function(a,b){var x=a.date.slice(8,10),y=b.date.slice(8,10);if(x!==y)return x<y?-o:o;var c1=(a.created||""),d=(b.created||"");return c1<d?-o:c1>d?o:(pos.get(a)-pos.get(b))*o});
   return RF[i]=r}
 function sumM(i){var c=MS[i];if(c!==undefined)return c;var items=LS().items,t=0;for(var k=0;k<items.length;k++)t+=monthAmt(items[k],i);return MS[i]=t}
 
@@ -430,7 +432,8 @@ function renderBills(){
   var names=state.cats.filter(function(c){return cs[c.name]}).map(function(c){return c.name});
   $("bchips").innerHTML=all.length?['all'].concat(names).map(function(n){return '<button type="button" class="bchip'+(n===billFilter?' on':'')+'" data-bf="'+encodeURIComponent(n)+'">'+(n==='all'?'All bills':esc(n))+'</button>'}).join(""):"";
   var rows=all.filter(function(it){return billFilter==="all"||it.cat===billFilter});
-  rows.sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:((a.created||"")<(b.created||"")?1:-1)});
+  var pos=new Map();state.items.forEach(function(it,k){pos.set(it,k)});
+  rows.sort(function(a,b){var c1=(a.created||""),d=(b.created||"");return a.date<b.date?1:a.date>b.date?-1:c1<d?1:c1>d?-1:pos.get(b)-pos.get(a)});
   if(!rows.length){$("bsum").textContent="";$("blist").innerHTML='<div class="empty">No bills yet. Add an expense in a bill category (Electricity, Κοινόχρηστα, Water…) and its history appears here.</div>';return}
   var tot=rows.reduce(function(t,it){return t+it.amt},0),am=rows.map(function(it){return it.amt});
   $("bsum").textContent=billFilter==="all"?rows.length+(rows.length===1?" payment · total ":" payments · total ")+fmt(tot):
