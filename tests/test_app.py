@@ -163,6 +163,30 @@ with sync_playwright() as pw:
     check(A.evaluate("getComputedStyle(document.documentElement).overflowY") != "hidden", "signed in: the page scrolls again")
     check(A.evaluate("localStorage.getItem('expense-calc-v2')") is None, "nothing is kept in the browser's storage")
 
+    # ---- a note on an expense: saved, shown under the row, searchable, removed when cleared
+    check(A.is_hidden("#note") and A.is_visible("#nlk"), "note box stays closed until + Add note is pressed")
+    A.click("#nlk")
+    A.fill("#note", "Paid by card, refund pending")
+    add_expense(A, "Note test", 25)
+    item = next(i for i in data_of(A)["data"]["items"] if i["name"] == "Note test")
+    check(item.get("note") == "Paid by card, refund pending", "note is saved with the expense")
+    check(A.is_hidden("#note"), "note box closes again after adding")
+    A.reload()
+    A.wait_for_selector("#sec .nt")
+    check("refund pending" in A.inner_text("#sec .nt"), "note shows under the expense after reloading")
+    A.fill("#q", "refund")
+    A.wait_for_timeout(400)
+    rows = A.eval_on_selector_all("#sec .row", "rs => rs.map(r => r.textContent)")
+    check(len(rows) == 1 and "Note test" in rows[0], "search finds an expense by its note")
+    A.fill("#q", "")
+    A.click('#sec .ed[data-id="%s"]' % item["id"])
+    check(A.input_value("#note") == "Paid by card, refund pending", "editing an expense shows its note")
+    A.fill("#note", "")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    item = next(i for i in data_of(A)["data"]["items"] if i["name"] == "Note test")
+    check("note" not in item, "clearing the note removes it")
+
     # wide window, three columns: scrolling the page keeps the side columns' cards on screen
     # (partway down: at the very bottom a fixed column is pushed up by the end of the page, the left one too)
     stays = A.evaluate("""(async () => { const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));

@@ -23,7 +23,7 @@ function qTokens(q){return fold(q).split(/\s+/).filter(Boolean)}
 function qMatch(it,toks,label){if(!toks.length)return true;var hay=null,tg=it.tags||[];
   for(var k=0;k<toks.length;k++){var t=toks[k];
     if(t.charAt(0)==="#"){var w=t.slice(1);if(!w)continue;var ok=false;for(var j=0;j<tg.length;j++)if(fold(tg[j]).indexOf(w)===0){ok=true;break}if(!ok)return false}
-    else{if(hay===null)hay=fold(it.name+" "+it.cat+" "+(label||"")+" "+tg.join(" "));if(hay.indexOf(t)<0)return false}}
+    else{if(hay===null)hay=fold(it.name+" "+it.cat+" "+(label||"")+" "+tg.join(" ")+" "+(it.note||""));if(hay.indexOf(t)<0)return false}}
   return true}
 function goalInfo(g,ci){var tg=+g.target||0,sv=+g.saved||0,left=Math.max(0,tg-sv),r={left:left,pct:tg>0?Math.min(100,sv/tg*100):0,done:tg>0&&sv>=tg,n:null,per:null,late:false};
   if(g.by&&!r.done){var n=idxOf(g.by)-ci+1;if(n>=1){r.n=n;r.per=left/n}else r.late=true}return r}
@@ -319,6 +319,7 @@ function norm(d){var t=today(),y=t.slice(0,4);
     it.name=String(it.name==null?"":it.name);it.cat=String(it.cat==null||it.cat===""?"Other":it.cat);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(it.date||""))it.date=y+"-01-01";if(!it.created)it.created=t;if(bills[it.cat])it.freq=0;
     var tg=parseTags(Array.isArray(it.tags)?it.tags.join(" "):it.tags);if(tg.length)it.tags=tg;else delete it.tags;
+    if(typeof it.note==="string"&&it.note.trim())it.note=it.note.trim().slice(0,300);else delete it.note;
     if(!/^\d{4}-\d{2}$/.test(it.until||"")||it.freq===0)delete it.until;
     if(Array.isArray(it.gaps)&&it.freq!==0){var gs=it.gaps.filter(function(g){return g&&/^\d{4}-\d{2}$/.test(g.a||"")&&(g.b==null||/^\d{4}-\d{2}$/.test(g.b))&&(g.b==null||idxOf(g.b)>=idxOf(g.a))}).map(function(g){return {a:g.a,b:g.b||null}});if(gs.length)it.gaps=gs;else delete it.gaps}else delete it.gaps});
   return d}
@@ -450,9 +451,11 @@ function rowHTML(it,i){
   var sub=esc(it.cat)+" · "+fmt(it.amt)+" "+L[it.freq]+" · "+(it.freq===0?dm(it.date):"from "+dm(it.date));
   if(rec&&it.until)sub+=" · "+X("ends after "+MNY(it.until),"τελευταίος μήνας: "+MNY(it.until));
   var tg=it.tags&&it.tags.length?'<span class="tgs">'+it.tags.map(function(t){return '<button type="button" class="tg" data-tg="'+esc(t)+'">#'+esc(t)+'</button>'}).join("")+'</span>':"";
-  return '<div class="row"><div>'+icItem(it)+esc(it.name)+'<small>'+sub+'</small>'+tg+billDelta(it)+'</div>'+
+  return '<div class="row"><div>'+icItem(it)+esc(it.name)+'<small>'+sub+'</small>'+tg+noteHTML(it)+billDelta(it)+'</div>'+
     '<div class="num">'+fmt(a)+'<small>/mo</small></div><div class="num yr">'+fmt(yearAmt(it,selYear))+'<small>/yr</small></div>'+
     '<span class="act">'+(rec?'<button class="ed2" data-rp="pause" data-id="'+it.id+'" aria-label="Pause" title="Pause">'+PAUSEI+'</button>':'')+'<button class="ed" data-id="'+it.id+'" aria-label="Edit">✎</button><button class="del" data-id="'+it.id+'" aria-label="Delete">✕</button></span></div>'}
+var NOTEI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8 9h8M8 13h5"/></svg>';
+function noteHTML(it){return it.note?'<button type="button" class="nt" data-nt aria-expanded="false">'+NOTEI+'<span>'+esc(it.note)+'</span></button>':""}
 function yearSums(y){var r={yb:0,plan:0,ex:0,ob:0};for(var m=0;m<12;m++){var i=y*12+m;r.yb+=budgetOf(LS(),i);r.ob+=oneSum(LS(),i,"budget");r.plan+=planSav(LS(),i);r.ex+=extraSav(LS(),i)}return r}
 function monthOpts(sel){var o="";for(var m=0;m<12;m++)o+='<option value="'+m+'"'+(m===sel?' selected':'')+'>'+MN(m)+'</option>';return o}
 function renderXs(){var xp=xpays(state),p=+state.payments||12,s=+state.salary||0;$("xs").hidden=!xp.length;
@@ -568,11 +571,14 @@ function applyData(d){
 // everyday spending starts as one-time, everything else as monthly, until the user picks "How often" themselves
 function applyCatRules(){var c=$("cat").value,f=$("freq");if(isBill(c)){f.value="0";f.disabled=true}else{f.disabled=false;if(!freqTouched)f.value=ONCE_CATS.indexOf(c)>=0?"0":"12"}syncEnd()}
 function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span aria-hidden="true">▾</span>';$("ddb").setAttribute("aria-label","Category: "+v);applyCatRules();updateLP()}
-function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";$("endm").value="";$("dt").value=today();applyCatRules();updateLP()}
+function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";showNote("");$("endm").value="";$("dt").value=today();applyCatRules();updateLP()}
 function startEdit(id){var it=find(id);if(!it)return;editing=id;freqTouched=true;
   $("cat").value=it.cat;syncCat();
-  $("name").value=it.name;delete $("name").dataset.auto;$("amt").value=it.amt;if(!$("freq").disabled)$("freq").value=it.freq;$("dt").value=it.date;$("tags").value=(it.tags||[]).join(", ");$("endm").value=it.until||"";syncEnd();
+  $("name").value=it.name;delete $("name").dataset.auto;$("amt").value=it.amt;if(!$("freq").disabled)$("freq").value=it.freq;$("dt").value=it.date;$("tags").value=(it.tags||[]).join(", ");showNote(it.note||"");$("endm").value=it.until||"";syncEnd();
   $("sb").textContent="Save";$("cc").hidden=false;$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
+// the note box stays closed until "+ Add note" is pressed or the expense already has a note
+function showNote(v,open){$("note").value=v;$("note").hidden=!(v||open);$("nlk").hidden=!!(v||open)}
+$("nlk").addEventListener("click",function(){showNote($("note").value,true);$("note").focus()});
 function prefillBill(r){stopEdit();$("cat").value=r.cat.name;syncCat();
   var mine=state.items.filter(function(e){return e.cat===r.cat.name});
   if(mine.length){var l=mine.reduce(function(a,b){return b.date>a.date?b:a});$("amt").value=l.amt}
@@ -581,9 +587,9 @@ $("f").addEventListener("submit",function(e){
   e.preventDefault();
   var a=parseFloat($("amt").value);if(!(a>0)){alert("Enter an amount greater than 0.");return}
   var o={name:$("name").value.trim()||$("cat").value,amt:a,freq:isBill($("cat").value)?0:+$("freq").value,cat:$("cat").value,date:$("dt").value||today()};
-  var tg=parseTags($("tags").value),en=$("endm").value;
+  var tg=parseTags($("tags").value),en=$("endm").value,nt=$("note").value.trim().slice(0,300);if(nt)o.note=nt;
   if(o.freq!==0&&/^\d{4}-\d{2}$/.test(en)){if(idxOf(en)<idxOf(o.date)){alert("The end month can’t be before the start date.");return}o.until=en}
-  var pvX=null;if(editing){var it=find(editing);if(it){pvX=clone(it);Object.assign(it,o);learnIt(o.name,o.cat);mClear();if(!o.until)delete it.until;if(tg.length)it.tags=tg;else delete it.tags}}
+  var pvX=null;if(editing){var it=find(editing);if(it){pvX=clone(it);Object.assign(it,o);learnIt(o.name,o.cat);mClear();if(!o.until)delete it.until;if(!nt)delete it.note;if(tg.length)it.tags=tg;else delete it.tags}}
   else{var dp=dupOf(o);
     if(dp){ask("This looks like a duplicate of “"+dp.name+"” ("+fmt(dp.amt)+", "+dmy(dp.date)+"). Add it anyway?",function(){commitNew(o,tg)},{ok:"Add anyway"});return}
     commitNew(o,tg);return}
@@ -1093,7 +1099,7 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "The VAT on this expense is deductible":"Το ΦΠΑ αυτού του εξόδου είναι εκπεστέο","VAT (ΦΠΑ)":"ΦΠΑ",
 "Client":"Πελάτης","Client (optional)":"Πελάτης (προαιρετικά)","Client name":"Όνομα πελάτη","Description (optional)":"Περιγραφή (προαιρετικά)","Goal (e.g. Holiday)":"Στόχος (π.χ. Διακοπές)","Goal name":"Όνομα στόχου",
 "Is the amount before or after VAT?":"Το ποσό είναι πριν ή μετά το ΦΠΑ;","Last month it counts":"Τελευταίος μήνας που μετράει","Month":"Μήνας","Pause":"Παύση","Saved so far":"Έχω αποταμιεύσει ήδη",
-"Search expenses":"Αναζήτηση εξόδων","Search name, category or #tag":"Αναζήτηση ονόματος, κατηγορίας ή #ετικέτας","Tags":"Ετικέτες","Tags (e.g. work, holiday)":"Ετικέτες (π.χ. δουλειά, διακοπές)",
+"Search expenses":"Αναζήτηση εξόδων","Search name, category or #tag":"Αναζήτηση ονόματος, κατηγορίας ή #ετικέτας","Tags":"Ετικέτες","+ Add note":"+ Προσθήκη σημείωσης","Note":"Σημείωση","Note (e.g. paid by card, refund pending)":"Σημείωση (π.χ. πληρωμή με κάρτα, εκκρεμεί επιστροφή)","Tags (e.g. work, holiday)":"Ετικέτες (π.χ. δουλειά, διακοπές)",
 "Target amount":"Ποσό-στόχος","Target month":"Μήνας-στόχος","VAT rate":"Συντελεστής ΦΠΑ",
 "The end month can’t be before the start date.":"Ο μήνας λήξης δεν μπορεί να είναι πριν από την ημερομηνία έναρξης."
 };
@@ -1786,6 +1792,7 @@ $("mrs").addEventListener("click",function(e){var box=this;
 /* ---- clicks added in v51 (tags, recurring buttons) ---- */
 document.addEventListener("click",function(e){var t=e.target,x;
   if(x=t.closest("[data-tg]")){toggleTag(x.getAttribute("data-tg"));return}
+  if(x=t.closest("[data-nt]")){var on=x.classList.toggle("full");x.setAttribute("aria-expanded",on);return}
   if(x=t.closest("[data-rp]")){recAct(x.getAttribute("data-rp"),x.getAttribute("data-id"))}});
 document.addEventListener("toggle",function(e){var d=e.target;if(!d||d.tagName!=="DETAILS")return;
   if(d.id==="recd"){openD.rec=d.open;if(d.open)renderRec();return}

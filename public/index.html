@@ -61,7 +61,7 @@ form{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .fa .primary{flex:1}
 .hint{color:var(--muted);font-size:.85rem;margin:8px 0 0}
 .ddf{display:grid;gap:6px}.ddf code{font-size:.82rem;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}.ddb{display:flex;flex-wrap:wrap;gap:6px}.ddb button{padding:5px 10px;font-size:.85rem}.ddb button[hidden]{display:none}
-input,select,button{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0}
+input,select,textarea,button{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0}
 button{cursor:pointer}
 button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
 button.ghost{background:none;color:var(--muted)}
@@ -359,6 +359,8 @@ body.nL.nR:not(.editing) .cols{grid-template-columns:minmax(0,900px);justify-con
 .tg:hover{border-color:var(--accent)}
 #tags,#endw{grid-column:span 2}
 .endw{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem}.endw input{flex:1;min-width:0}
+.ntw{grid-column:1/-1}.nlk{border:0;background:none;padding:0;color:var(--accent);font-size:.85rem;cursor:pointer}#note{display:block;width:100%;box-sizing:border-box;resize:vertical}#note[hidden]{display:none}
+.nt{display:flex;gap:5px;align-items:flex-start;width:100%;margin-top:4px;padding:0;border:0;border-radius:0;background:none;color:var(--muted);font-size:.8rem;text-align:left;cursor:pointer}.nt svg{flex:none;width:13px;height:13px;margin-top:2px}.nt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nt.full span{white-space:pre-wrap;overflow-wrap:anywhere}
 .hintd>summary{justify-content:flex-start;padding:0;margin-top:8px;color:var(--muted);font-size:.85rem;width:max-content;max-width:100%}.hintd>summary::before{margin-right:6px}.hintd .hint{margin-top:4px}.of+.hintd{margin-bottom:14px}
 .recd>summary{color:var(--accent);font-weight:600}#sec2>details:last-child{border-bottom:1px solid var(--line)}
 .rr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
@@ -674,6 +676,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <input id="dt" type="date" title="Date (due date for bills)" aria-label="Date" required>
     <input id="tags" list="taglist" placeholder="Tags (e.g. work, holiday)" maxlength="80" autocomplete="off" aria-label="Tags">
     <datalist id="taglist"></datalist>
+    <div class="ntw"><button type="button" class="nlk" id="nlk">+ Add note</button><textarea id="note" rows="2" maxlength="300" placeholder="Note (e.g. paid by card, refund pending)" aria-label="Note" hidden></textarea></div>
     <label class="endw" id="endw"><span>Ends after (optional)</span><input id="endm" type="month" aria-label="Last month it counts"></label>
     <span class="fa"><button class="primary" type="submit" id="sb">Add</button><button class="ghost" type="button" id="cc" hidden>Cancel</button></span>
   </form>
