@@ -101,7 +101,8 @@ function insightsFor(st,today){
   S.rows.forEach(function(r){
     if(r.bill)return;
     if(S.n>=2&&r.avg>0&&r.cur>r.avg*1.25&&r.cur-r.avg>=10)out.push({id:"rise",tone:"tip",w:(r.cur-r.avg)*12,cat:r.cat,pct:Math.round((r.cur/r.avg-1)*100),avg:r.avg,yearly:(r.cur-r.avg)*12});
-    else if(S.n>=2&&r.avg>0&&r.cur<r.avg*0.85&&r.avg-r.cur>=10)out.push({id:"down",tone:"good",w:1,cat:r.cat,pct:Math.round((1-r.cur/r.avg)*100)})});
+    // "less than usual" compares with what is usually spent by this date, and waits a week so a near-empty month isn't praised
+    else if(S.n>=2&&dd>=7&&r.avg>0){var due=r.avg*dd/dim;if(r.cur<due*0.85&&due-r.cur>=10)out.push({id:"down",tone:"good",w:1,cat:r.cat,pct:Math.round((1-r.cur/due)*100)})}});
   var subs=items.filter(function(it){return it.cat==="Subscriptions"&&it.freq!==0&&yearAmt(it,Math.floor(ci/12))>0});
   if(subs.length>=2)out.push({id:"subs",tone:"tip",w:subs.reduce(function(t,it){return t+yearAmt(it,Math.floor(ci/12))},0)*0.3,n:subs.length,yearly:subs.reduce(function(t,it){return t+yearAmt(it,Math.floor(ci/12))},0)});
   (st.cats||[]).forEach(function(c){if(!c.bill)return;
@@ -321,13 +322,16 @@ function norm(d){var t=today(),y=t.slice(0,4);
     if(!/^\d{4}-\d{2}$/.test(it.until||"")||it.freq===0)delete it.until;
     if(Array.isArray(it.gaps)&&it.freq!==0){var gs=it.gaps.filter(function(g){return g&&/^\d{4}-\d{2}$/.test(g.a||"")&&(g.b==null||/^\d{4}-\d{2}$/.test(g.b))&&(g.b==null||idxOf(g.b)>=idxOf(g.a))}).map(function(g){return {a:g.a,b:g.b||null}});if(gs.length)it.gaps=gs;else delete it.gaps}else delete it.gaps});
   return d}
-var NF={};function fmt(n){var l=LANG==="el"?"el-GR":"en-US",f=NF[l]||(NF[l]=new Intl.NumberFormat(l,{minimumFractionDigits:2,maximumFractionDigits:2}));return state.cur+" "+f.format(n)}
+var NF={};function fmt(n){var l=LANG==="el"?"el-GR":"en-US",f=NF[l]||(NF[l]=new Intl.NumberFormat(l,{minimumFractionDigits:2,maximumFractionDigits:2}));return state.cur+" "+f.format(n)}
 function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
 function dm(s){return s.slice(8,10)+"/"+s.slice(5,7)}
 var MNC=["January","February","March","April","May","June","July","August","September","October","November","December"];function MN(i){return MNC[((i%12)+12)%12]}
 function colorFor(p){return "hsl("+Math.max(0,120-120*Math.min(p,100)/100)+",65%,42%)"}
 // the same green-to-red for text: mixed with the theme's text colour (darker in light, lighter in dark) so it reads at 4.5:1 or more in every theme
 function textColorFor(p){return "color-mix(in oklab,"+colorFor(p)+" 55%,var(--text))"}
+// the yearly plan is a commitment, not money gone: it warms only to amber when fully planned, and turns Brick only past 100%
+function planColorFor(p){return p>100?"var(--danger)":"hsl("+(120-84*Math.max(p,0)/100)+",65%,42%)"}
+function planTextFor(p){return p>100?"var(--danger)":"color-mix(in oklab,"+planColorFor(p)+" 55%,var(--text))"}
 function say(t){$("ds").textContent=t}
 
 var ICONS={
@@ -513,9 +517,9 @@ function render(){
     $("rsl").textContent="Real savings in "+selYear+(sm.length?" ("+sm.length+(sm.length===1?" completed month)":" completed months)"):"");
     $("rs").textContent=(sm.length||wdx)?fmt(real):"—";$("rs").style.color=real<0?"var(--danger)":"";
     $("rsd").textContent=sm.length?(diff>=0?"+"+fmt(diff)+" more than planned":fmt(-diff)+" less than planned"):"Real savings start counting once the first month is completed."}
-  if(yb>0){var pc=planned/yb*100,left=yb-planned,col=colorFor(pc);
-    $("bb").style.width=Math.min(pc,100)+"%";$("bb").style.background=col;$("y").style.color=textColorFor(pc);$("bs").style.color=textColorFor(pc);
-    $("bs").textContent=pc.toFixed(0)+"% of the yearly budget planned ("+selYear+") · "+(left>=0?fmt(left)+" left":fmt(-left)+" over budget");
+  if(yb>0){var pc=planned/yb*100,left=yb-planned,col=planColorFor(pc);
+    $("bb").style.width=Math.min(pc,100)+"%";$("bb").style.background=col;$("y").style.color=planTextFor(pc);$("bs").style.color=planTextFor(pc);
+    $("bs").textContent=pc.toFixed(0)+"% of the yearly budget planned ("+selYear+") · "+(left>=0?fmt(left)+" not yet planned":fmt(-left)+" over budget");
   }else{$("bb").style.width="0";$("y").style.color="";$("bs").style.color="";$("bs").textContent="Set your monthly budget in Profile to see your budget status."}
 
   var rs=curReminders();lastSig=rs.map(function(r){return r.key}).join(",");
@@ -562,7 +566,7 @@ function applyData(d){
 
 // everyday spending starts as one-time, everything else as monthly, until the user picks "How often" themselves
 function applyCatRules(){var c=$("cat").value,f=$("freq");if(isBill(c)){f.value="0";f.disabled=true}else{f.disabled=false;if(!freqTouched)f.value=ONCE_CATS.indexOf(c)>=0?"0":"12"}syncEnd()}
-function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span>▾</span>';applyCatRules();updateLP()}
+function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span aria-hidden="true">▾</span>';$("ddb").setAttribute("aria-label","Category: "+v);applyCatRules();updateLP()}
 function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";$("endm").value="";$("dt").value=today();applyCatRules();updateLP()}
 function startEdit(id){var it=find(id);if(!it)return;editing=id;freqTouched=true;
   $("cat").value=it.cat;syncCat();
@@ -587,7 +591,14 @@ $("f").addEventListener("submit",function(e){
 function dupOf(o){var its=LS().items,nm=o.name.toLowerCase();
   for(var k=0;k<its.length;k++){var it=its[k];if(it.cat!==o.cat||it.name.toLowerCase()!==nm||Math.abs(it.amt-o.amt)>=.005)continue;
     if(o.freq===0?(it.freq===0&&idxOf(it.date)===idxOf(o.date)):it.freq===o.freq)return it}return null}
-function commitNew(o,tg){learnIt(o.name,o.cat);o.id=nid();o.created=today();if(tg.length)o.tags=tg;state.items.push(o);stopEdit();$("amt").focus();save();render()}
+function commitNew(o,tg){learnIt(o.name,o.cat);o.id=nid();o.created=today();if(tg.length)o.tags=tg;state.items.push(o);stopEdit();$("amt").focus();save();render();
+  // confirm every new expense, with an Undo that takes exactly this one back out
+  var fo=o.freq?$("freq").querySelector('option[value="'+o.freq+'"]'):null,id=o.id,
+    nm=o.name===o.cat?cn(o.name):o.name,rest=" · "+fmt(o.amt)+" · "+cn(o.cat)+(fo?" · "+fo.textContent.toLowerCase():"");
+  editToast(X("Added “"+nm+"”"+rest,"Προστέθηκε «"+nm+"»"+rest),null,null,function(){
+    var k="x:"+id;if(pend[k]){clearTimeout(pend[k]);delete pend[k]}
+    state.items=state.items.filter(function(i){return i.id!==id});if(editing===id)stopEdit();
+    save();render();$("amt").focus();announce(X("Expense removed","Το έξοδο αφαιρέθηκε"))})}
 $("cc").addEventListener("click",stopEdit);
 $("amt").addEventListener("input",updateLP);
 $("name").addEventListener("input",function(){delete this.dataset.auto});
@@ -620,7 +631,7 @@ $("clear").addEventListener("click",function(){if(state.items.length)ask((state.
   var prev=state.items;state.items=[];stopEdit();save();render();
   // the same way back as after deleting one expense: an Undo button for a few seconds
   var t=$("toast");if(!t)return;
-  t.innerHTML='<span>'+esc(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"))+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;
+  t.innerHTML='<span>'+esc(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"))+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;announce(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"));
   clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},8000);
   $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);if(!state.items.length)state.items=prev;else state.items=prev.concat(state.items);save();render()})},{ok:"Delete all",danger:true})});
 function dlBlob(name,blob){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}
@@ -729,7 +740,7 @@ function helpOpen(v){$("hov").hidden=!v;if(v){$("opt").hidden=true;$("gear").set
 $("helpb").addEventListener("click",function(e){e.stopPropagation();helpOpen(true)});
 $("hpx").addEventListener("click",function(){helpOpen(false)});
 // Help and Profile can be closed from several places; their buttons follow whether they are open
-[["hov","helpb"],["pfov","pfb"]].forEach(function(p){new MutationObserver(function(){$(p[1]).setAttribute("aria-expanded",String(!$(p[0]).hidden))}).observe($(p[0]),{attributes:true,attributeFilter:["hidden"]})});
+[["hov","helpb"],["pfov","pfb"],["ddm","ddb"]].forEach(function(p){new MutationObserver(function(){$(p[1]).setAttribute("aria-expanded",String(!$(p[0]).hidden))}).observe($(p[0]),{attributes:true,attributeFilter:["hidden"]})});
 $("hov").addEventListener("click",function(e){if(e.target===this)helpOpen(false)});
 // Profile: backups and the account, in a window like Help
 function profileOpen(v){$("pfov").hidden=!v;if(v){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false");$("pfx").focus()}else $("pfb").focus()}
@@ -987,7 +998,7 @@ function mNom(n){return EL_M[EN_M.indexOf(n)]}
 function mGen(n){return EL_G[EN_M.indexOf(n)]}
 function mAcc(n){return EL_M[EN_M.indexOf(n)].slice(0,-1)}
 function plu(n,a,b){return +n===1?a:b}
-var A="(\\S+ -?[\\d.,]+)";
+var A="(\\S+[ \\u00a0]-?[\\d.,]+)";
 var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλαγή…","Use the standard folder":"Χρήση του βασικού φακέλου","Where this PC keeps your offline data and the app’s settings. Changing it moves them there.":"Πού κρατά αυτός ο υπολογιστής τα δεδομένα εκτός σύνδεσης και τις ρυθμίσεις της εφαρμογής. Αν τον αλλάξετε, μεταφέρονται εκεί.","Enter the full path of a folder, for example D:\\Cent-aur":"Βάλτε την πλήρη διαδρομή ενός φακέλου, για παράδειγμα D:\\Cent-aur","Cent-aur cannot save files in that folder.":"Το Cent-aur δεν μπορεί να αποθηκεύσει αρχεία σε αυτόν τον φάκελο.","Your data could not be moved there. Nothing was changed.":"Δεν ήταν δυνατή η μεταφορά των δεδομένων σας εκεί. Τίποτα δεν άλλαξε.","The server could not be reached. Check the address and your connection.": "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε τη διεύθυνση και τη σύνδεσή σας.", "That address answered, but it is not a Cent-aur server.": "Αυτή η διεύθυνση απάντησε, αλλά δεν είναι διακομιστής Cent-aur.", "Enter the server address, for example https://cent-aur.example.com": "Βάλτε τη διεύθυνση του διακομιστή, για παράδειγμα https://cent-aur.example.com", "This is not available while working offline.": "Αυτό δεν είναι διαθέσιμο όταν δουλεύετε εκτός σύνδεσης.", "Could not change the start-with-Windows setting.": "Δεν ήταν δυνατή η αλλαγή της εκκίνησης με τα Windows.", "Start with Windows": "Εκκίνηση με τα Windows", "Opens Cent-aur when you sign in to Windows.": "Ανοίγει το Cent-aur όταν συνδέεστε στα Windows.","Choose a password that is harder to guess.":"Επιλέξτε έναν κωδικό που μαντεύεται πιο δύσκολα.","Your data is too large to save.":"Τα δεδομένα σας είναι πολύ μεγάλα για να αποθηκευτούν.",
 "Wrong user name or password.":"Λάθος όνομα χρήστη ή κωδικός.","Too many wrong tries. Wait 10 minutes and try again.":"Πάρα πολλές λάθος προσπάθειες. Περιμένετε 10 λεπτά και δοκιμάστε ξανά.","Please sign in.":"Παρακαλώ συνδεθείτε.","The current password is not right.":"Ο τρέχων κωδικός δεν είναι σωστός.","The password must be at least 8 characters.":"Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.","The password is too long.":"Ο κωδικός είναι πολύ μεγάλος.","That user name is already taken.":"Αυτό το όνομα χρήστη χρησιμοποιείται ήδη.","The user name must be 2-40 letters, numbers or . _ - @":"Το όνομα χρήστη πρέπει να έχει 2-40 γράμματα, αριθμούς ή . _ - @","There must always be one active administrator.":"Πρέπει να υπάρχει πάντα ένας ενεργός διαχειριστής.","You can't delete your own account while signed in.":"Δεν μπορείτε να διαγράψετε τον λογαριασμό σας ενώ είστε συνδεδεμένοι.","Only the administrator can do that.":"Μόνο ο διαχειριστής μπορεί να το κάνει αυτό.","No such user.":"Δεν υπάρχει τέτοιος χρήστης.","Enter your user name and password.":"Βάλτε όνομα χρήστη και κωδικό.","Something went wrong on the server.":"Κάτι πήγε στραβά στον διακομιστή.","Blocked: wrong origin.":"Αποκλείστηκε: λάθος προέλευση.",
 "Reset layout":"Επαναφορά διάταξης","Simple":"Απλή","Full view":"Πλήρης προβολή","Edit":"Επεξεργασία","Done":"Τέλος","Help":"Βοήθεια","More":"Περισσότερα","Options":"Ρυθμίσεις","Settings":"Ρυθμίσεις","Profile":"Προφίλ","Close profile":"Κλείσιμο προφίλ","Language":"Γλώσσα",
@@ -1095,6 +1106,11 @@ R("^(\\d+(?:\\.\\d+)?)% of the monthly budget used$",function(m){return "Χρη�
 R("^(\\d+(?:\\.\\d+)?)% of the yearly budget planned \\((\\d{4})\\)$",function(m){return "Προγραμματίστηκε το "+m[1]+"% του ετήσιου προϋπολογισμού ("+m[2]+")"});
 R("^"+A+" left$",function(m){return m[1]+" απομένουν"});
 R("^"+A+" over budget$",function(m){return m[1]+" πάνω από τον προϋπολογισμό"});
+R("^Category: (.+)$",function(m){return "Κατηγορία: "+trCat(m[1])});
+R("^"+A+" not yet planned$",function(m){return m[1]+" δεν έχουν προγραμματιστεί ακόμα"});
+R("^Moved (\\d+) expenses?$",function(m){return "Μετακινήθηκαν "+m[1]+" "+plu(m[1],"έξοδο","έξοδα")});
+DICT["Loaded your data."]="Τα δεδομένα σας φορτώθηκαν.";DICT["Password changed."]="Ο κωδικός άλλαξε.";DICT["Name"]="Όνομα";
+DICT["Import replaces everything with the file. Merge adds only what is missing and keeps what you already have."]="Η εισαγωγή αντικαθιστά τα πάντα με το αρχείο. Η συγχώνευση προσθέτει μόνο ό,τι λείπει και κρατά όσα ήδη έχετε.";
 R("^"+A+" over$",function(m){return m[1]+" πάνω"});
 R("^Spent in ("+MONRE+")$",function(m){return "Έξοδα "+mGen(m[1])});
 R("^Planned for (\\d{4})$",function(m){return "Προγραμματισμένα για το "+m[1]});
@@ -1171,9 +1187,11 @@ function trLine(core){
   return p.join("")}
 var EN_EX={"Φόρος επιτηδεύματος · tax calculator":"Freelancer tax calculator"};
 var EN_T=[[/Φόρος επιτηδεύματος/g,"Freelancer tax"],[/Τέλος επιτηδεύματος/g,"Professional activity fee"],[/τέλος επιτηδεύματος/g,"professional activity fee"],[/ΕΦΚΑ/g,"EFKA"],[/Μπλοκάκι/g,"Receipt block"],[/μπλοκάκι/g,"receipt block"],[/Κοινόχρηστα/g,"Common charges"],[/ΑΑΔΕ/g,"AADE"]];
-function trEn(s){if(!/[Α-ώ]/.test(s))return s;var m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(!m[2])return s;var c=m[2].replace(/\s+/g," ");if(EN_EX[c])return m[1]+EN_EX[c]+m[3];EN_T.forEach(function(t){c=c.replace(t[0],t[1])});return m[1]+c+m[3]}
+function trEn(s){if(!/[Α-ώ]/.test(s))return s;var m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(!m[2])return s;var c=m[2].replace(/\s+/g," ");if(EN_EX[c])return m[1]+EN_EX[c]+m[3];EN_T.forEach(function(t){c=c.replace(t[0],t[1])});return m[1]+nbc(c)+m[3]}
 function trAny(s){return LANG==="el"?trText(s):trEn(s)}
-function trText(s){var m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);return m[2]?m[1]+trLine(m[2])+m[3]:s}
+// translating folds every space into a plain one; put back the no-break space that keeps "€" on the same line as its amount
+function nbc(s){return s.replace(/([€$£]) (?=-?\d)/g,"$1 ")}
+function trText(s){var m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);return m[2]?m[1]+nbc(trLine(m[2]))+m[3]:s}
 function T(s){return LANG==="el"?trText(String(s)):s}
 var dlgYes=null;
 function ask(msg,yes,o){o=o||{};var d=$("dlg");d.hidden=false;$("dlgm").textContent=T(msg);dlgYes=yes||null;
@@ -1221,7 +1239,7 @@ function fmOpen(o){FM=o;$("fmt").textContent=o.title;$("fmi").textContent=o.intr
   var c=$("fmc");if(c)c.addEventListener("click",function(){var f=FM;fmClose();if(f&&f.onCancel)f.onCancel()});
   var a2=$("fma2");if(a2)a2.addEventListener("click",function(){var f=FM;fmClose();f.alt.fn()});
   var first=$("fmb").querySelector("input");if(first)first.focus();else $("fmo").focus()}
-function fmErr(m){var e=$("fme");e.textContent=T(m);e.hidden=false}
+function fmErr(m){var e=$("fme");e.hidden=false;e.textContent="";e.textContent=T(m)}
 $("fmf").addEventListener("submit",function(e){e.preventDefault();if(!FM)return;var o=FM,v={};o.fields.forEach(function(f){var el=$("fm_"+f.id);v[f.id]=f.type==="checkbox"?el.checked:el.value});
   var b=$("fmo");b.disabled=true;$("fme").hidden=true;
   Promise.resolve().then(function(){return o.onOk(v)}).then(function(){if(FM===o)fmClose()},function(er){fmErr(er&&er.message||X("Something went wrong.","Κάτι πήγε στραβά."))}).then(function(){b.disabled=false})});
@@ -1275,7 +1293,7 @@ function accNewPw(){
 // ---- the data: loaded after sign-in, saved after every change, refreshed when another device changed it
 function accLoad(pre){ACC.loaded=false;
   return (pre?Promise.resolve(pre):api("/api/data")).then(function(j){ACC.rev=j.rev;ACC.loaded=true;ACC.err="";ACC.tries=0;
-    if(j.data&&applyData(j.data))say(X("Loaded your data.","Τα δεδομένα σας φορτώθηκαν."));
+    if(j.data&&applyData(j.data))say("Loaded your data.");
     else applyData(JSON.parse(STATE0));
     if($("fmm").classList.contains("boot"))fmClose();
     accStatusUI()}).catch(accFail)}
@@ -1309,7 +1327,7 @@ function accOut(){
 function accPw(){fmOpen({title:X("Change password","Αλλαγή κωδικού"),intro:X("Your other devices will be signed out.","Οι άλλες συσκευές σας θα αποσυνδεθούν."),
   fields:[{id:"o",label:X("Current password","Τρέχων κωδικός"),type:"password",auto:"current-password"},{id:"n",label:X("New password (at least 8 characters)","Νέος κωδικός (τουλάχιστον 8 χαρακτήρες)"),type:"password",auto:"new-password"},{id:"n2",label:X("New password again","Νέος κωδικός ξανά"),type:"password",auto:"new-password"}],
   ok:X("Change password","Αλλαγή κωδικού"),onOk:function(v){if(v.n!==v.n2)throw new Error(X("The two passwords are not the same.","Οι δύο κωδικοί δεν ταιριάζουν."));
-    return api("/api/password",{method:"POST",body:JSON.stringify({old:v.o,"new":v.n})}).then(function(){say(X("Password changed.","Ο κωδικός άλλαξε."))})}})}
+    return api("/api/password",{method:"POST",body:JSON.stringify({old:v.o,"new":v.n})}).then(function(){say("Password changed.")})}})}
 // ---- administrator: manage users
 var AD={users:[],me:0};
 function adLoad(){return api("/api/admin/users").then(function(j){AD.users=j.users;AD.me=j.me;adDraw()},function(e){$("usri").textContent=T(e.message)})}
@@ -1420,10 +1438,14 @@ function commitDel(k,id){var key=k+":"+id;clearTimeout(pend[key]);delete pend[ke
   else{state.fl.items=state.fl.items.filter(function(x){return x.id!==id});if(flEdit===id)stopFl()}
   save();render()}
 function undoDel(key){clearTimeout(pend[key]);delete pend[key];render()}
-function editToast(msg,getList,prev){var t=$("toast");if(!t)return;
-  t.innerHTML='<span>'+esc(msg)+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;
+// typing the next expense means the last one is settled: close its toast so it can't sit over the Add button on a phone
+$("f").addEventListener("input",function(){var t=$("toast");if(t&&!t.hidden){t.hidden=true;clearTimeout(toastT)}});
+// screen readers: a live region that is always in the page (a toast that appears and fills in one step is often not read out)
+function announce(msg){var r=$("sra");if(!r)return;r.textContent="";setTimeout(function(){r.textContent=msg},60)}
+function editToast(msg,getList,prev,undo){var t=$("toast");if(!t)return;
+  t.innerHTML='<span>'+esc(msg)+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;announce(msg);
   clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},6000);
-  $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);var l=getList();for(var i=0;i<l.length;i++)if(l[i].id===prev.id)l[i]=prev;save();render()})}
+  $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);if(undo){undo();return}var l=getList();for(var i=0;i<l.length;i++)if(l[i].id===prev.id)l[i]=prev;save();render()})}
 function X(en,el){return LANG==="el"?el:en}
 function cn(n){return LANG==="el"?trCat(n):n}
 function renderIns(){var el=$("inslist");if(!el)return;
@@ -1438,7 +1460,7 @@ function renderIns(){var el=$("inslist");if(!el)return;
     else if(x.id==="bill"){t=X(c+" bill is up "+x.pct+"% on the previous one","Ο λογαριασμός "+c+" αυξήθηκε "+x.pct+"% σε σχέση με τον προηγούμενο");u=X("Compare providers or check your usage — "+fmt(x.diff)+" more per bill adds up.","Συγκρίνετε παρόχους ή ελέγξτε την κατανάλωσή σας — τα "+fmt(x.diff)+" παραπάνω ανά λογαριασμό μετράνε.")}
     else if(x.id==="lowerbudget"){t=X("Your budget is "+fmt(x.diff)+" above your average spending","Ο προϋπολογισμός σας είναι "+fmt(x.diff)+" πάνω από τα μέσα έξοδά σας");u=X("Lowering it to about "+fmt(x.tgt)+" a month would add roughly "+fmt(x.yearly)+" a year to your planned savings.","Αν τον μειώσετε στα "+fmt(x.tgt)+" τον μήνα, οι αποταμιεύσεις σας θα αυξηθούν κατά περίπου "+fmt(x.yearly)+" τον χρόνο.")}
     else if(x.id==="trim"){t=X(c+" is your biggest expense ("+x.share+"% of the month)","Η μεγαλύτερη δαπάνη σας είναι "+c+" ("+x.share+"% του μήνα)");u=X("Trimming it by 10% would save about "+fmt(x.yearly)+" a year.","Μείωσή της κατά 10% θα εξοικονομούσε περίπου "+fmt(x.yearly)+" τον χρόνο.")}
-    else{t=X(c+" is "+x.pct+"% below your 3-month average",c+": "+x.pct+"% κάτω από τον μέσο όρο 3 μηνών");u=X("Nice — keep it up.","Μπράβο — συνεχίστε έτσι.")}
+    else{t=X(c+" is "+x.pct+"% lower than usual by this point in the month",c+": "+x.pct+"% χαμηλότερα από ό,τι συνήθως μέχρι αυτή την ημέρα του μήνα");u=X("Nice — keep it up.","Μπράβο — συνεχίστε έτσι.")}
     return '<div class="in '+x.tone+'"><b>'+t+'</b><small>'+u+'</small></div>'}).join("")}
 function insSummary(){var S=catStats(LS(),today()),f=function(n){return fmt(n)};
   var h=X("Here is my monthly budget summary. Please suggest practical ways I could save money.\n","Ακολουθεί η σύνοψη του μηνιαίου προϋπολογισμού μου. Πρότεινέ μου πρακτικούς τρόπους να εξοικονομήσω χρήματα.\n");
@@ -1758,7 +1780,7 @@ $("mrscan").addEventListener("click",function(){var box=$("mrs"),rows=[];
 $("mrs").addEventListener("click",function(e){var box=this;
   if(e.target.id==="mrcancel"){box.hidden=true;return}
   if(e.target.id==="mrapply"){var n=0;Array.prototype.forEach.call(box.querySelectorAll("[data-si]"),function(c){if(!c.checked)return;var r=box._rows[+c.getAttribute("data-si")];if(r&&catOf(r.cat)){r.it.cat=r.cat;n++}});
-    box.hidden=true;if(n){save();render();say(X("Moved "+n+(n===1?" expense":" expenses"),"Μετακινήθηκαν "+n+(n===1?" έξοδο":" έξοδα")))}}});
+    box.hidden=true;if(n){save();render();say("Moved "+n+(n===1?" expense":" expenses"))}}});
 
 /* ---- clicks added in v51 (tags, recurring buttons) ---- */
 document.addEventListener("click",function(e){var t=e.target,x;
@@ -1809,7 +1831,7 @@ function trDetail(i){
   if(b>0){var d=sp-b;h+=t(" of "," από ")+fmt(b)+t(" budget"," προϋπολογισμό")+' (<span class="'+(d>0?'up':'dn')+'">'+fmt(Math.abs(d))+(d>0?t(" over"," πάνω"):t(" under"," κάτω"))+'</span>)'}
   var pv=sumM(i-1);
   if(pv>0&&sp>0){var df=sp-pv,pc=Math.round(Math.abs(df)/pv*100);if(pc>0)h+='<br>'+(df>0?'<span class="up">▲ ':'<span class="dn">▼ ')+fmt(Math.abs(df))+' ('+pc+'%)</span> '+t("vs ","σε σχέση με ")+esc(LANG==="el"?EL_M[(i-1+120000)%12].slice(0,-1):MN(i-1))}
-  var cs=trCats(i).slice(0,3);if(cs.length)h+='<br>'+t("Biggest: ","Μεγαλύτερα: ")+cs.map(function(c){return esc(c.n)+' '+fmt(c.v)}).join(' · ');
+  var cs=trCats(i).slice(0,3);if(cs.length)h+='<br>'+t("Biggest: ","Μεγαλύτερα: ")+cs.map(function(c){return esc(cn(c.n))+' '+fmt(c.v)}).join(' · ');
   if(!sp)h+='<br>'+t("No expenses in this month.","Δεν υπάρχουν έξοδα αυτόν τον μήνα.");
   el.innerHTML=h}
 function trPick(i){trSel=i;var g=document.querySelector("#trc .guide"),s=document.querySelector("#trc .trsvg");

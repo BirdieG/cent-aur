@@ -131,8 +131,8 @@ body.fulllists .scl{max-height:none;overflow:visible}
 .dlgo{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}.dlgo[hidden]{display:none}
 .dlgb{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;width:min(380px,100%);box-shadow:0 16px 48px rgba(0,0,0,.4)}.dlgb p{margin:0 0 16px;line-height:1.45}.dlga{display:flex;justify-content:flex-end;gap:8px}
 .ordsel{font-size:.8rem;padding:6px 8px}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:14px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.9rem}
-.toast[hidden]{display:none}.toast button{background:none;border:1px solid currentColor;color:inherit;padding:4px 10px;border-radius:8px;cursor:pointer}
+.toast{position:fixed;left:16px;right:16px;bottom:20px;margin:0 auto;width:fit-content;max-width:560px;z-index:90;display:flex;align-items:center;gap:14px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.9rem}
+.toast[hidden]{display:none}.toast span{min-width:0}.toast button{flex:none;white-space:nowrap}.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.toast button{background:none;border:1px solid currentColor;color:inherit;padding:4px 10px;border-radius:8px;cursor:pointer}
 .fcd{border-top:0;padding:0}.fcd>summary{display:list-item;list-style:none;cursor:pointer;padding:0;margin:0}.fcd>summary h2{display:inline;margin:0}.fcd>summary::before{content:"▸ ";color:var(--muted)}.fcd[open]>summary::before{content:"▾ "}.fcd[open]>summary{margin-bottom:10px}#xs{margin-top:10px}#xs+.inc{margin-top:14px}#xs>summary h2{font-size:.9rem;font-weight:600;color:var(--muted)}
 details details{padding-left:6px}
 summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:6px 0;list-style:none}
@@ -483,7 +483,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <ul>
     <li>Pick a category, type a name and an amount, choose how often it repeats (daily, weekly, monthly, yearly&hellip; or one-time) and a date.</li>
     <li>Use <b>Edit</b> on any row to change it later.</li>
-    <li>The coloured bar shows how much of your budget is used: green is fine, red means you are over.</li>
+    <li>The coloured bars fill up as your budget gets used. The one at the top counts everything planned for the year: it warms to amber when the whole year is planned and turns red only if your plans go over the budget. The one under <b>This month</b> counts what you have spent this month: it turns from green to red as it nears 100%; past 100% you are over budget.</li>
     <li>Add <b>tags</b> (for example work or holiday) and use the <b>search box</b> above the list to find expenses by name, category or <b>#tag</b>. Click a tag to filter by it.</li>
     <li>Open <b>Recurring expenses</b> under the list to <b>pause</b>, <b>resume</b> or <b>end</b> an expense that repeats. Past months never change.</li>
   </ul>
@@ -537,7 +537,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <ul>
     <li>Διαλέξτε κατηγορία, πληκτρολογήστε όνομα και ποσό, επιλέξτε πόσο συχνά επαναλαμβάνεται (καθημερινά, εβδομαδιαία, μηνιαία, ετήσια&hellip; ή εφάπαξ) και μια ημερομηνία.</li>
     <li>Χρησιμοποιήστε το <b>Επεξεργασία</b> σε οποιαδήποτε γραμμή για να την αλλάξετε αργότερα.</li>
-    <li>Η έγχρωμη μπάρα δείχνει πόσο από τον προϋπολογισμό σας έχει χρησιμοποιηθεί: το πράσινο σημαίνει ότι όλα καλά, το κόκκινο ότι τον ξεπερνάτε.</li>
+    <li>Οι έγχρωμες μπάρες γεμίζουν καθώς χρησιμοποιείται ο προϋπολογισμός σας. Η πάνω μετρά όσα έχουν προγραμματιστεί για όλη τη χρονιά: γίνεται πορτοκαλί όταν έχει προγραμματιστεί όλη η χρονιά και κόκκινη μόνο αν τα σχέδιά σας ξεπερνούν τον προϋπολογισμό. Αυτή κάτω από το <b>Αυτός ο μήνας</b> μετρά όσα ξοδέψατε αυτόν τον μήνα: από πράσινη γίνεται κόκκινη καθώς πλησιάζει το 100%· πάνω από το 100% έχετε ξεπεράσει τον προϋπολογισμό.</li>
     <li>Προσθέστε <b>ετικέτες</b> (π.χ. δουλειά ή διακοπές) και χρησιμοποιήστε το <b>πλαίσιο αναζήτησης</b> πάνω από τη λίστα για να βρείτε έξοδα με βάση το όνομα, την κατηγορία ή την <b>#ετικέτα</b>. Πατήστε μια ετικέτα για να φιλτράρετε με αυτήν.</li>
     <li>Ανοίξτε τα <b>Επαναλαμβανόμενα έξοδα</b> κάτω από τη λίστα για να θέσετε σε <b>παύση</b>, να <b>συνεχίσετε</b> ή να <b>λήξετε</b> ένα έξοδο που επαναλαμβάνεται. Οι προηγούμενοι μήνες δεν αλλάζουν ποτέ.</li>
   </ul>
@@ -659,8 +659,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="slot" data-card="add"><div class="ctl" hidden><b>Add expense</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card">
   <form id="f">
-    <input id="amt" type="number" step="0.01" min="0.01" placeholder="Amount" required>
-    <div class="nw" id="nw"><input id="name" placeholder="Name (e.g. Rent, Mobile phone 2)" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
+    <input id="amt" type="number" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
+    <div class="nw" id="nw"><input id="name" placeholder="Name (e.g. Rent, Mobile phone 2)" aria-label="Name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
     <select id="freq" aria-label="How often">
       <option value="0">One-time</option>
       <option value="365">Daily</option>
@@ -670,7 +670,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
       <option value="4">Quarterly</option>
       <option value="1">Yearly</option>
     </select>
-    <div class="dd" id="dd"><input type="hidden" id="cat" value="Housing"><button type="button" class="ddb" id="ddb"></button><div class="ddm" id="ddm" hidden></div></div>
+    <div class="dd" id="dd"><input type="hidden" id="cat" value="Housing"><button type="button" class="ddb" id="ddb" aria-haspopup="true" aria-expanded="false"></button><div class="ddm" id="ddm" hidden></div></div>
     <input id="dt" type="date" title="Date (due date for bills)" aria-label="Date" required>
     <input id="tags" list="taglist" placeholder="Tags (e.g. work, holiday)" maxlength="80" autocomplete="off" aria-label="Tags">
     <datalist id="taglist"></datalist>
@@ -877,6 +877,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <input type="file" id="mgf" accept=".json,application/json" hidden>
     <input type="file" id="imf" accept=".json,application/json" hidden>
   </div>
+  <p class="hint">Import replaces everything with the file. Merge adds only what is missing and keeps what you already have.</p>
   <div id="acw" class="acw" hidden style="margin-top:14px">
     <div class="ol" id="act"></div>
     <p class="hint" id="ach"></p>
@@ -885,8 +886,9 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div id="ds" class="empty"></div>
 </div>
 </div>
-<div class="toast" id="toast" role="status" hidden></div>
-<div class="dlgo lock boot" id="fmm"><div class="scb fmw" role="dialog" aria-modal="true" aria-labelledby="fmt"><div class="fmbr"><img src="app-icons/logo.webp" width="64" height="64" alt=""><div class="fmbn" data-notr><span>Cent</span>-aur</div><div class="fmbt">Every cent counts.</div></div><h3 id="fmt" data-notr></h3><p class="hint" id="fmi" data-notr></p><form id="fmf" autocomplete="on"><div class="scfm" id="fmb"></div><p class="scwn" id="fme" hidden data-notr></p><div class="scfa" id="fma"></div></form><p class="ghl"><a href="https://github.com/BirdieG/cent-aur" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>Cent-aur on GitHub</span></a></p></div></div>
+<div class="toast" id="toast" hidden></div>
+<div class="sr" id="sra" role="status" aria-live="polite"></div>
+<div class="dlgo lock boot" id="fmm"><div class="scb fmw" role="dialog" aria-modal="true" aria-labelledby="fmt"><div class="fmbr"><img src="app-icons/logo.webp" width="64" height="64" alt=""><div class="fmbn" data-notr><span>Cent</span>-aur</div><div class="fmbt">Every cent counts.</div></div><h3 id="fmt" data-notr></h3><p class="hint" id="fmi" data-notr></p><form id="fmf" autocomplete="on"><div class="scfm" id="fmb"></div><p class="scwn" id="fme" role="alert" hidden data-notr></p><div class="scfa" id="fma"></div></form><p class="ghl"><a href="https://github.com/BirdieG/cent-aur" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>Cent-aur on GitHub</span></a></p></div></div>
 <div class="dlgo" id="usrm" hidden><div class="scb usrw" role="dialog" aria-modal="true" aria-labelledby="usrt"><h3 id="usrt" data-notr></h3><p class="hint" id="usri" data-notr></p><div class="scfa" style="justify-content:flex-start;margin:0 0 6px" id="usrtop"></div><div class="usrl" id="usrl"></div><div class="scfa"><button type="button" class="ghost" id="usrx"></button></div></div></div>
 <div class="dlgo" id="dlg" hidden><div class="dlgb" role="alertdialog" aria-modal="true" aria-labelledby="dlgm"><p id="dlgm"></p><div class="dlga"><button type="button" class="ghost" id="dlgc">Cancel</button><button type="button" class="primary" id="dlgy">OK</button></div></div></div>
 </main>
