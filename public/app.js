@@ -194,6 +194,8 @@ var MERCH_SRC=[
 "alphabank|Alpha Bank|Alpha Bank|Bills|αλφα μπανκ,αλφα τραπεζα",
 "eurobank|Eurobank|Eurobank|Bills|ευρωτραπεζα",
 "nbg|National Bank|Εθνική Τράπεζα|Bills|nbg,εθνικη τραπεζα",
+"loan|Loan|Δάνειο|Bank|δανεια,loans",
+"installments|Installments|Δόσεις|Bank|δοση,installment",
 "interamerican|Interamerican|Interamerican|Bills|ιντεραμερικαν",
 "ethniki|Ethniki Insurance|Εθνική Ασφαλιστική|Bills|ethniki asfalistiki",
 "generali|Generali|Generali|Bills|τζενεραλι",
@@ -257,14 +259,15 @@ function mKeyword(text){if(!MIDX)mBuild();var e=mFind(text,KWIDX);return e?e[1]:
 var LANG=(function(){try{var q=localStorage.getItem("xpence-lang");if(q==="el"||q==="en")return q}catch(e){}try{return /^el/i.test(navigator.language||"")?"el":"en"}catch(e){return "en"}})();
 try{document.documentElement.lang=LANG}catch(e){}
 var selYear=null,editing=null,layEdit=false,openD={},st=null,lastDay="",laterKey=null,lastSig="";
+var ONCE_CATS=["Food","Supermarket","Transport","Health","Leisure","Other"],freqTouched=false;
 function defaultCats(){var s=today().slice(0,7);return [
  {name:"Housing",icon:"house"},{name:"Κοινόχρηστα",icon:"building",bill:1},{name:"Mobile phone",icon:"phone",bill:1},{name:"Electricity",icon:"bolt",bill:1},
  {name:"Water",icon:"drop",bill:1},{name:"Internet",icon:"wifi",bill:1},{name:"Food",icon:"fork"},{name:"Supermarket",icon:"cart"},{name:"Transport",icon:"car"},
- {name:"Bills",icon:"receipt"},{name:"Subscriptions",icon:"screen"},{name:"Health",icon:"heart"},{name:"Leisure",icon:"spark"},{name:"Other",icon:"grid"}
+ {name:"Bills",icon:"receipt"},{name:"Bank",icon:"bank"},{name:"Subscriptions",icon:"screen"},{name:"Health",icon:"heart"},{name:"Leisure",icon:"spark"},{name:"Other",icon:"grid"}
  ].map(function(c){c.bill=!!c.bill;c.dueDay=null;c.every=1;c.since=s;c.group=["Water","Electricity","Internet"].indexOf(c.name)>=0?"Utilities":"";return c})}
 var FLC=["flov","flvat","flen","flcc","flrep","fltc","fladd"],DEF_FL={L:[],A:["flov","flvat","flen","flcc","flrep","fltc"],B:["fladd"]};
-var VIEWS=["insights","goals","trend","whatif","savings","extra","bills","bycat","data"];
-var DEF_LAYOUT={L:["savings","goals","extra"],M:["totals","budget","add","expenses","bills","bycat","trend","data"],R:["side","insights","whatif"]},CARDS=["totals","budget","savings","goals","extra","add","side","insights","expenses","bills","bycat","trend","whatif","data"];
+var VIEWS=["insights","goals","trend","whatif","savings","extra","bills","bycat"];
+var DEF_LAYOUT={L:["savings","goals","extra"],M:["totals","add","expenses","bills","bycat","trend"],R:["side","insights","whatif"]},CARDS=["totals","savings","goals","extra","add","side","insights","expenses","bills","bycat","trend","whatif"];
 function normFl(l){var seen={},out={L:[],A:[],B:[]};
   if(l&&typeof l==="object")["L","A","B"].forEach(function(c){(Array.isArray(l[c])?l[c]:[]).forEach(function(id){if(FLC.indexOf(id)>=0&&!seen[id]){seen[id]=1;out[c].push(id)}})});
   ["L","A","B"].forEach(function(c){DEF_FL[c].forEach(function(id){if(!seen[id]){seen[id]=1;out[c].push(id)}})});return out}
@@ -323,6 +326,8 @@ function esc(t){var d=document.createElement("div");d.textContent=t;return d.inn
 function dm(s){return s.slice(8,10)+"/"+s.slice(5,7)}
 var MNC=["January","February","March","April","May","June","July","August","September","October","November","December"];function MN(i){return MNC[((i%12)+12)%12]}
 function colorFor(p){return "hsl("+Math.max(0,120-120*Math.min(p,100)/100)+",65%,42%)"}
+// the same green-to-red for text: mixed with the theme's text colour (darker in light, lighter in dark) so it reads at 4.5:1 or more in every theme
+function textColorFor(p){return "color-mix(in oklab,"+colorFor(p)+" 55%,var(--text))"}
 function say(t){$("ds").textContent=t}
 
 var ICONS={
@@ -472,7 +477,7 @@ function renderEo(){$("eolist").innerHTML=periodHTML(state.oneoff.filter(functio
 function monthDetails(i){
   var rows=rowsFor(i),k="m"+i,head;
   if(qToks.length){var sp0=0;rows.forEach(function(it){if(!isPend("x",it.id))sp0+=monthAmt(it,i)});head='<span class="num">'+rows.length+(rows.length===1?' entry':' entries')+' · '+fmt(sp0)+'</span>'}
-  else{var sp=sumM(i),b=budgetOf(LS(),i),left=b-sp,col=b>0?colorFor(sp/b*100):"var(--muted)",av=+state.salary||0;
+  else{var sp=sumM(i),b=budgetOf(LS(),i),left=b-sp,col=b>0?textColorFor(sp/b*100):"var(--muted)",av=+state.salary||0;
     head='<span class="num" style="color:'+col+'">'+fmt(sp)+(b>0?' · '+(left>=0?fmt(left)+' left':fmt(-left)+' over'):'')+(oneSum(LS(),i,"budget")>0?' <span class="gd">+'+fmt(oneSum(LS(),i,"budget"))+' extra</span>':'')+(i<idxOf(today())&&av>0?'<span class="adv"> · saved '+fmt(realSav(LS(),i,sp))+'</span>':'')+'</span>'}
   LAZY[k]=function(){return rows.map(function(it){return rowHTML(it,i)}).join("")};
   return '<details data-k="'+k+'"'+(openD[k]?' open':'')+'><summary><span class="sum">'+MN(i)+' '+Math.floor(i/12)+'</span>'+head+'</summary><div class="scl" data-lz="'+k+'">'+(openD[k]?LAZY[k]():"")+'</div></details>'}
@@ -497,7 +502,7 @@ function render(){
   $("ylab").textContent="Planned for "+selYear;$("y").textContent=fmt(planned);
   $("ysl").textContent="Total yearly salary (salary × "+pm+")";$("ysal").textContent=fmt((+state.salary||0)*pm);
   $("yb").textContent=fmt(yb);$("ybl").textContent="Total yearly budget ("+selYear+")";$("ybx").textContent=Y.ob>0?"+"+fmt(Y.ob)+" from extra money":"";renderXs();renderMb();renderEo();renderWd();renderGains();renderFl();renderGoals();renderTrend();renderWhatIf();
-  $("sv2").hidden=!(avg>0);$("sh").textContent=avg>0?(Y.plan<0?"Your budgets are higher than your salary plus extra money, so planned savings are negative.":"Real savings = your salary plus any extra money (extra salaries, one-offs), minus what you actually spent, for each completed month. Whatever you don’t spend of your budget counts as saved."):"Enter your monthly salary to see how much you are saving.";
+  $("sv2").hidden=!(avg>0);$("shd").hidden=!(avg>0);$("sh").textContent=avg>0?(Y.plan<0?"Your budgets are higher than your salary plus extra money, so planned savings are negative.":""):"Set your monthly salary in Profile to see how much you are saving.";$("sh").hidden=!$("sh").textContent;
   if(avg>0){var sm=savedMonths(fi,ci,selYear),real=sm.reduce(function(t,i){return t+realSav(LS(),i,sumM(i))},0),wdx=0,pl=sm.reduce(function(t,i){return t+planSav(LS(),i)},0);for(var q=0;q<12;q++){var qi=selYear*12+q;if(qi<=ci&&sm.indexOf(qi)<0)wdx+=wdSum(LS(),qi)}real-=wdx;var diff=real-pl;
     $("avgl").textContent="Monthly income (salary)";$("avg").textContent=fmt(avg);
     var pmn=avg-(+state.income||0);$("ps").textContent=fmt(pmn);$("ps").style.color=pmn<0?"var(--danger)":"";
@@ -506,9 +511,9 @@ function render(){
     $("rs").textContent=(sm.length||wdx)?fmt(real):"—";$("rs").style.color=real<0?"var(--danger)":"";
     $("rsd").textContent=sm.length?(diff>=0?"+"+fmt(diff)+" more than planned":fmt(-diff)+" less than planned"):"Real savings start counting once the first month is completed."}
   if(yb>0){var pc=planned/yb*100,left=yb-planned,col=colorFor(pc);
-    $("bb").style.width=Math.min(pc,100)+"%";$("bb").style.background=col;$("y").style.color=col;$("bs").style.color=col;
+    $("bb").style.width=Math.min(pc,100)+"%";$("bb").style.background=col;$("y").style.color=textColorFor(pc);$("bs").style.color=textColorFor(pc);
     $("bs").textContent=pc.toFixed(0)+"% of the yearly budget planned ("+selYear+") · "+(left>=0?fmt(left)+" left":fmt(-left)+" over budget");
-  }else{$("bb").style.width="0";$("y").style.color="";$("bs").style.color="";$("bs").textContent="Enter your monthly budget to see your budget status."}
+  }else{$("bb").style.width="0";$("y").style.color="";$("bs").style.color="";$("bs").textContent="Set your monthly budget in Profile to see your budget status."}
 
   var rs=curReminders();lastSig=rs.map(function(r){return r.key}).join(",");
   var remH=rs.length?'<div class="rl">'+rs.map(function(r){
@@ -521,7 +526,7 @@ function render(){
     var rows=rowsFor(ci);
     h+='<div class="cur"><div class="head"><h2>This month ('+MN(ci)+')</h2><span class="num">'+fmt(cm)+(inc>0?' of '+fmt(inc)+(state.budgets&&state.budgets[ymOf(ci)]!=null?' (custom)':'')+(oneSum(LS(),ci,"budget")>0?' <span class="gd">+'+fmt(oneSum(LS(),ci,"budget"))+' extra</span>':''):'')+'</span></div>';
     if(inc>0){var pm2=cm/inc*100,c2=colorFor(pm2),l2=inc-cm;
-      h+='<div class="bb"><i style="width:'+Math.min(pm2,100)+'%;background:'+c2+'"></i></div><div class="st" style="color:'+c2+'">'+pm2.toFixed(0)+'% of the monthly budget used · '+(l2>=0?fmt(l2)+' left':fmt(-l2)+' over budget')+'</div>'}
+      h+='<div class="bb"><i style="width:'+Math.min(pm2,100)+'%;background:'+c2+'"></i></div><div class="st" style="color:'+textColorFor(pm2)+'">'+pm2.toFixed(0)+'% of the monthly budget used · '+(l2>=0?fmt(l2)+' left':fmt(-l2)+' over budget')+'</div>'}
     if(avg>0){var rl=realSav(LS(),ci,cm),pl2=planSav(LS(),ci);h+='<div class="st adv" style="color:'+(rl<0?'var(--danger)':rl>=pl2?'var(--accent)':'var(--text)')+'">Saving this month: '+fmt(rl)+' (planned '+fmt(pl2)+')</div>'}
     h+=remH+(rows.length?'<div class="scl">'+rows.map(function(it){return rowHTML(it,ci)}).join("")+'</div>':'<div class="empty">'+(qToks.length?X("No expenses match your search.","Κανένα έξοδο δεν ταιριάζει με την αναζήτηση."):"No expenses this month yet.")+'</div>')+'</div>';
     h+=group("up","Upcoming months",months(ci+1,cy*12+11));
@@ -552,10 +557,11 @@ function applyData(d){
   $("inc").value=state.income||"";$("sal").value=state.salary||"";$("pay").value=state.payments||12;
   buildMenu();renderCats();stopEdit();syncCat();applyTheme();syncOpts();applyLayout();applyFlLayout();syncFcalc();applyTab();applySimple();applyCollapse();applyFull();syncLang();$("fltax").value=state.fl.tax||"";stopFl();stopGoal();stopCl();syncEnd();applyView();render();return true}
 
-function applyCatRules(){var b=isBill($("cat").value),f=$("freq");if(b){f.value="0";f.disabled=true}else if(f.disabled){f.disabled=false;f.value="12"}syncEnd()}
+// everyday spending starts as one-time, everything else as monthly, until the user picks "How often" themselves
+function applyCatRules(){var c=$("cat").value,f=$("freq");if(isBill(c)){f.value="0";f.disabled=true}else{f.disabled=false;if(!freqTouched)f.value=ONCE_CATS.indexOf(c)>=0?"0":"12"}syncEnd()}
 function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span>▾</span>';applyCatRules();updateLP()}
-function stopEdit(){editing=null;catTouched=false;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";$("endm").value="";$("dt").value=today();syncEnd();updateLP()}
-function startEdit(id){var it=find(id);if(!it)return;editing=id;
+function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";$("endm").value="";$("dt").value=today();applyCatRules();updateLP()}
+function startEdit(id){var it=find(id);if(!it)return;editing=id;freqTouched=true;
   $("cat").value=it.cat;syncCat();
   $("name").value=it.name;delete $("name").dataset.auto;$("amt").value=it.amt;if(!$("freq").disabled)$("freq").value=it.freq;$("dt").value=it.date;$("tags").value=(it.tags||[]).join(", ");$("endm").value=it.until||"";syncEnd();
   $("sb").textContent="Save";$("cc").hidden=false;$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
@@ -605,7 +611,15 @@ $("inc").addEventListener("input",function(){state.income=parseFloat(this.value)
 $("sal").addEventListener("input",function(){state.salary=parseFloat(this.value)||0;save();render()});
 $("pay").addEventListener("change",function(){state.payments=+this.value;save();render()});
 $("cur").addEventListener("change",function(){state.cur=this.value;save();render()});
-$("clear").addEventListener("click",function(){if(state.items.length)ask("Remove all expenses?",function(){state.items=[];stopEdit();save();render()},{ok:"Delete"})});
+$("clear").addEventListener("click",function(){if(state.items.length)ask((state.items.length===1?X("Delete your only expense?","Να διαγραφεί το μοναδικό σας έξοδο;"):
+  X("Delete all "+state.items.length+" expenses, from every month and year?","Να διαγραφούν και τα "+state.items.length+" έξοδα, από όλους τους μήνες και τα έτη;"))+" "+
+  X("Your budget, savings and categories stay.","Ο προϋπολογισμός, οι αποταμιεύσεις και οι κατηγορίες μένουν."),function(){
+  var prev=state.items;state.items=[];stopEdit();save();render();
+  // the same way back as after deleting one expense: an Undo button for a few seconds
+  var t=$("toast");if(!t)return;
+  t.innerHTML='<span>'+esc(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"))+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;
+  clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},8000);
+  $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);if(!state.items.length)state.items=prev;else state.items=prev.concat(state.items);save();render()})},{ok:"Delete all",danger:true})});
 function dlBlob(name,blob){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}
 function saveAs(name,blob,desc,mime,ext){
   if(typeof window.showSaveFilePicker!=="function"){dlBlob(name,blob);return Promise.resolve(true)}
@@ -657,8 +671,8 @@ function doDelCat(c){
   state.cats.splice(state.cats.indexOf(c),1);
   if($("cat").value===c.name)$("cat").value="Other";
   buildMenu();renderCats();syncCat();save();render()}
-$("cmt").addEventListener("click",function(){$("cmp").hidden=!$("cmp").hidden});
-$("cadd").addEventListener("click",function(){$("cmp").hidden=false;openCat(-1)});
+// one button opens the category list (✎ edits, ✕ deletes) with the form for a new category below it, and closes it again
+$("cadd").addEventListener("click",function(){if(!$("cmp").hidden){$("cmp").hidden=true;$("cf").hidden=true;ci=null}else{$("cmp").hidden=false;openCat(-1)}});
 $("ip").addEventListener("click",function(e){var b=e.target.closest(".icb");if(!b)return;selIcon=b.dataset.ic;markIcon()});
 $("cb").addEventListener("change",function(){$("cbo").hidden=!this.checked});
 $("cx").addEventListener("click",function(){$("cf").hidden=true;ci=null});
@@ -711,9 +725,26 @@ $("gear").addEventListener("click",function(e){e.stopPropagation();var o=$("opt"
 function helpOpen(v){$("hov").hidden=!v;if(v){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false");$("hpx").focus()}else $("helpb").focus()}
 $("helpb").addEventListener("click",function(e){e.stopPropagation();helpOpen(true)});
 $("hpx").addEventListener("click",function(){helpOpen(false)});
+// Help and Profile can be closed from several places; their buttons follow whether they are open
+[["hov","helpb"],["pfov","pfb"]].forEach(function(p){new MutationObserver(function(){$(p[1]).setAttribute("aria-expanded",String(!$(p[0]).hidden))}).observe($(p[0]),{attributes:true,attributeFilter:["hidden"]})});
 $("hov").addEventListener("click",function(e){if(e.target===this)helpOpen(false)});
+// Profile: backups and the account, in a window like Help
+function profileOpen(v){$("pfov").hidden=!v;if(v){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false");$("pfx").focus()}else $("pfb").focus()}
+$("pfb").addEventListener("click",function(e){e.stopPropagation();profileOpen(true)});
+$("pfx").addEventListener("click",function(){profileOpen(false)});
+$("pfov").addEventListener("click",function(e){if(e.target===this)profileOpen(false)});
+// a dialog opened from the profile (manage users, a question) closes first
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("pfov").hidden&&!document.querySelector(".dlgo:not([hidden])"))profileOpen(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("hov").hidden)helpOpen(false)});
 $("optx").addEventListener("click",function(){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")});
+// open Settings moves down only the card columns it would cover, so nothing sits under it
+function optPush(){var o=$("opt"),cs=document.querySelectorAll("#cols>.col,#flcols>.col");
+  cs.forEach(function(c){c.style.marginTop=""});if(o.hidden)return;
+  var r=o.getBoundingClientRect();
+  cs.forEach(function(c){if(!c.offsetParent)return;var b=c.getBoundingClientRect();if(b.height&&b.left<r.right&&b.right>r.left&&b.top<r.bottom+40)c.style.marginTop=Math.ceil(r.bottom+40-b.top)+"px"})}
+new MutationObserver(optPush).observe($("opt"),{attributes:true,attributeFilter:["hidden"]});
+if(window.ResizeObserver)new ResizeObserver(function(){if(!$("opt").hidden)optPush()}).observe($("opt"));
+window.addEventListener("resize",optPush);
 document.addEventListener("click",function(e){if(!$("opt").hidden&&!e.target.closest("#opt")&&!e.target.closest("#gear")){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("opt").hidden){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}});
 $("sw").addEventListener("click",function(e){var b=e.target.closest(".swb");if(!b)return;state.theme.pal=b.dataset.p;applyTheme();syncOpts();save()});
@@ -939,6 +970,11 @@ $("mbl").addEventListener("change",function(e){var k=e.target.getAttribute("data
 Array.prototype.forEach.call(document.querySelectorAll(".ordsel"),function(o){o.addEventListener("change",function(){state.order=this.value==="old"?"old":"new";save();render()})});
 $("calcb").addEventListener("click",openCalc);
 $("calcx").addEventListener("click",function(){calcs.slice().forEach(closeCalc)});
+// buttons in the cards that open a panel, form, menu or window stay highlighted while it is open
+var OPENB=[["cadd",function(){return !$("cmp").hidden}],
+  ["mrt",function(){return !$("mrp").hidden}],["calcb",function(){return calcs.length>0}],["ddb",function(){return !$("ddm").hidden}]];
+function syncOpenB(){OPENB.forEach(function(p){var b=$(p[0]);if(!b)return;var on=!!p[1]();if(b.classList.contains("isopen")!==on){b.classList.toggle("isopen",on);b.setAttribute("aria-expanded",String(on))}})}
+new MutationObserver(syncOpenB).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden"]});
 
 /* ===== Language (English / Ελληνικά) ===== */
 var EN_M="January|February|March|April|May|June|July|August|September|October|November|December".split("|"),MONRE=EN_M.join("|"),
@@ -951,9 +987,9 @@ function plu(n,a,b){return +n===1?a:b}
 var A="(\\S+ -?[\\d.,]+)";
 var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλαγή…","Use the standard folder":"Χρήση του βασικού φακέλου","Where this PC keeps your offline data and the app’s settings. Changing it moves them there.":"Πού κρατά αυτός ο υπολογιστής τα δεδομένα εκτός σύνδεσης και τις ρυθμίσεις της εφαρμογής. Αν τον αλλάξετε, μεταφέρονται εκεί.","Enter the full path of a folder, for example D:\\Cent-aur":"Βάλτε την πλήρη διαδρομή ενός φακέλου, για παράδειγμα D:\\Cent-aur","Cent-aur cannot save files in that folder.":"Το Cent-aur δεν μπορεί να αποθηκεύσει αρχεία σε αυτόν τον φάκελο.","Your data could not be moved there. Nothing was changed.":"Δεν ήταν δυνατή η μεταφορά των δεδομένων σας εκεί. Τίποτα δεν άλλαξε.","The server could not be reached. Check the address and your connection.": "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε τη διεύθυνση και τη σύνδεσή σας.", "That address answered, but it is not a Cent-aur server.": "Αυτή η διεύθυνση απάντησε, αλλά δεν είναι διακομιστής Cent-aur.", "Enter the server address, for example https://cent-aur.example.com": "Βάλτε τη διεύθυνση του διακομιστή, για παράδειγμα https://cent-aur.example.com", "This is not available while working offline.": "Αυτό δεν είναι διαθέσιμο όταν δουλεύετε εκτός σύνδεσης.", "Could not change the start-with-Windows setting.": "Δεν ήταν δυνατή η αλλαγή της εκκίνησης με τα Windows.", "Start with Windows": "Εκκίνηση με τα Windows", "Opens Cent-aur when you sign in to Windows.": "Ανοίγει το Cent-aur όταν συνδέεστε στα Windows.","Choose a password that is harder to guess.":"Επιλέξτε έναν κωδικό που μαντεύεται πιο δύσκολα.","Your data is too large to save.":"Τα δεδομένα σας είναι πολύ μεγάλα για να αποθηκευτούν.",
 "Wrong user name or password.":"Λάθος όνομα χρήστη ή κωδικός.","Too many wrong tries. Wait 10 minutes and try again.":"Πάρα πολλές λάθος προσπάθειες. Περιμένετε 10 λεπτά και δοκιμάστε ξανά.","Please sign in.":"Παρακαλώ συνδεθείτε.","The current password is not right.":"Ο τρέχων κωδικός δεν είναι σωστός.","The password must be at least 8 characters.":"Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.","The password is too long.":"Ο κωδικός είναι πολύ μεγάλος.","That user name is already taken.":"Αυτό το όνομα χρήστη χρησιμοποιείται ήδη.","The user name must be 2-40 letters, numbers or . _ - @":"Το όνομα χρήστη πρέπει να έχει 2-40 γράμματα, αριθμούς ή . _ - @","There must always be one active administrator.":"Πρέπει να υπάρχει πάντα ένας ενεργός διαχειριστής.","You can't delete your own account while signed in.":"Δεν μπορείτε να διαγράψετε τον λογαριασμό σας ενώ είστε συνδεδεμένοι.","Only the administrator can do that.":"Μόνο ο διαχειριστής μπορεί να το κάνει αυτό.","No such user.":"Δεν υπάρχει τέτοιος χρήστης.","Enter your user name and password.":"Βάλτε όνομα χρήστη και κωδικό.","Something went wrong on the server.":"Κάτι πήγε στραβά στον διακομιστή.","Blocked: wrong origin.":"Αποκλείστηκε: λάθος προέλευση.",
-"Reset layout":"Επαναφορά διάταξης","Simple":"Απλή","Full view":"Πλήρης προβολή","Edit":"Επεξεργασία","Done":"Τέλος","Help":"Βοήθεια","Options":"Ρυθμίσεις","Language":"Γλώσσα",
+"Reset layout":"Επαναφορά διάταξης","Simple":"Απλή","Full view":"Πλήρης προβολή","Edit":"Επεξεργασία","Done":"Τέλος","Help":"Βοήθεια","More":"Περισσότερα","Options":"Ρυθμίσεις","Settings":"Ρυθμίσεις","Profile":"Προφίλ","Close profile":"Κλείσιμο προφίλ","Language":"Γλώσσα",
 "Switch between the full and the simplified view":"Εναλλαγή μεταξύ πλήρους και απλής προβολής","Edit layout":"Επεξεργασία διάταξης",
-"Close options":"Κλείσιμο ρυθμίσεων","Close help":"Κλείσιμο βοήθειας","Close calculator":"Κλείσιμο αριθμομηχανής",
+"Close options":"Κλείσιμο ρυθμίσεων","Close settings":"Κλείσιμο ρυθμίσεων","Close help":"Κλείσιμο βοήθειας","Close calculator":"Κλείσιμο αριθμομηχανής",
 "Move up":"Μετακίνηση πάνω","Move down":"Μετακίνηση κάτω","Move left":"Μετακίνηση αριστερά","Move right":"Μετακίνηση δεξιά",
 "Color theme":"Χρωματικό θέμα","Appearance":"Εμφάνιση","Automatic (system)":"Αυτόματο (σύστημα)","Light":"Φωτεινή","Dark":"Σκούρα","Custom":"Προσαρμοσμένο",
 "Green":"Πράσινο","Graphite":"Γραφίτης","Ocean":"Ωκεανός","Rose":"Ροζ","Sunset":"Ηλιοβασίλεμα","Violet":"Βιολετί",
@@ -977,7 +1013,7 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "Total yearly budget":"Συνολικός ετήσιος προϋπολογισμός","Budget per month":"Προϋπολογισμός ανά μήνα",
 "Name (e.g. Rent, Mobile phone 2)":"Όνομα (π.χ. Ενοίκιο, Κινητό 2)","Date (due date for bills)":"Ημερομηνία (ημερομηνία λήξης για λογαριασμούς)","How often":"Πόσο συχνά",
 "One-time":"Εφάπαξ","Daily":"Καθημερινά","Weekly":"Εβδομαδιαία","Every 2 weeks":"Ανά 2 εβδομάδες","Monthly":"Μηνιαία","Quarterly":"Ανά τρίμηνο","Yearly":"Ετήσια",
-"Currency":"Νόμισμα","Clear all":"Διαγραφή όλων","Manage":"Διαχείριση","+ New category":"+ Νέα κατηγορία",
+"Currency":"Νόμισμα","Clear all":"Διαγραφή όλων","Delete all":"Διαγραφή όλων","Manage":"Διαχείριση","+ New category":"+ Νέα κατηγορία","Edit / Add Categories":"Επεξεργασία / Προσθήκη κατηγοριών",
 "Category name (e.g. Mobile phone 2)":"Όνομα κατηγορίας (π.χ. Κινητό 2)",
 "Group (optional): categories with the same group are combined in By category":"Ομάδα (προαιρετικό): κατηγορίες με την ίδια ομάδα συγχωνεύονται στο «Ανά κατηγορία»",
 "This is a bill (remind me when the next payment is due)":"Αυτός είναι λογαριασμός (υπενθύμιση όταν λήξει η επόμενη πληρωμή)",
@@ -989,8 +1025,8 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "No expenses this month yet.":"Δεν υπάρχουν έξοδα αυτόν τον μήνα ακόμη.","No entries this month yet.":"Δεν υπάρχουν καταχωρήσεις αυτόν τον μήνα ακόμη.",
 "No extra money added to this month’s budget.":"Δεν έχουν προστεθεί έκτακτα έσοδα στον προϋπολογισμό αυτού του μήνα.",
 "Nothing to show yet.":"Δεν υπάρχει κάτι να εμφανιστεί ακόμη.","Show less":"Εμφάνιση λιγότερων",
-"Enter your monthly budget to see your budget status.":"Εισαγάγετε τον μηνιαίο προϋπολογισμό σας για να δείτε την κατάστασή του.",
-"Enter your monthly salary to see how much you are saving.":"Εισαγάγετε τον μηνιαίο μισθό σας για να δείτε πόσα αποταμιεύετε.",
+"Set your monthly budget in Profile to see your budget status.":"Ορίστε τον μηνιαίο προϋπολογισμό σας στο Προφίλ για να δείτε την κατάστασή του.",
+"Set your monthly salary in Profile to see how much you are saving.":"Ορίστε τον μηνιαίο μισθό σας στο Προφίλ για να δείτε πόσα αποταμιεύετε.",
 "Your budgets are higher than your salary plus extra money, so planned savings are negative.":"Οι προϋπολογισμοί σας είναι υψηλότεροι από τον μισθό και τα έκτακτα έσοδα, οπότε οι προγραμματισμένες αποταμιεύσεις είναι αρνητικές.",
 "Real savings = your salary plus any extra money (extra salaries, one-offs), minus what you actually spent, for each completed month. Whatever you don’t spend of your budget counts as saved.":"Πραγματικές αποταμιεύσεις = ο μισθός σας συν τυχόν έκτακτα έσοδα (έξτρα μισθοί, εφάπαξ ποσά), μείον όσα ξοδέψατε πραγματικά, για κάθε ολοκληρωμένο μήνα. Ό,τι δεν ξοδεύετε από τον προϋπολογισμό σας θεωρείται αποταμιευμένο.",
 "Real savings start counting once the first month is completed.":"Οι πραγματικές αποταμιεύσεις μετρούν μόλις ολοκληρωθεί ο πρώτος μήνας.",
@@ -1008,7 +1044,7 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "The Other category can’t be deleted.":"Η κατηγορία «Άλλο» δεν μπορεί να διαγραφεί.","Remove all expenses?":"Να αφαιρεθούν όλα τα έξοδα;",
 "That file isn’t a Cent-aur backup.":"Αυτό το αρχείο δεν είναι αντίγραφο ασφαλείας του Cent-aur.",
 "Saved":"Αποθηκεύτηκε",
-"Housing":"Στέγαση","Mobile phone":"Κινητό τηλέφωνο","Electricity":"Ρεύμα","Water":"Νερό","Internet":"Διαδίκτυο","Food":"Φαγητό","Supermarket":"Σούπερ μάρκετ","Transport":"Μεταφορές","Bills":"Λογαριασμοί","Subscriptions":"Συνδρομές","Health":"Υγεία","Leisure":"Ψυχαγωγία","Other":"Άλλο","Utilities":"Υπηρεσίες κοινής ωφέλειας",
+"Housing":"Στέγαση","Mobile phone":"Κινητό τηλέφωνο","Electricity":"Ρεύμα","Water":"Νερό","Internet":"Διαδίκτυο","Food":"Φαγητό","Bank":"Τράπεζα","How it works":"Πώς λειτουργεί","Supermarket":"Σούπερ μάρκετ","Transport":"Μεταφορές","Bills":"Λογαριασμοί","Subscriptions":"Συνδρομές","Health":"Υγεία","Leisure":"Ψυχαγωγία","Other":"Άλλο","Utilities":"Υπηρεσίες κοινής ωφέλειας",
 "Bill":"Λογαριασμός","due day of your last payment":"ημέρα λήξης: της τελευταίας πληρωμής","every month":"κάθε μήνα","using your entries":"με βάση τις καταχωρήσεις σας","Previous payment":"Προηγούμενη πληρωμή",
 "/mo":"/μήν.","/yr":"/έτος",
 "Freelance overview":"Επισκόπηση ελεύθερου επαγγελματία","Profit":"Κέρδος","Earned":"Έσοδα","Pending invoices":"Εκκρεμή τιμολόγια","Year":"Έτος",
@@ -1139,7 +1175,9 @@ function T(s){return LANG==="el"?trText(String(s)):s}
 var dlgYes=null;
 function ask(msg,yes,o){o=o||{};var d=$("dlg");d.hidden=false;$("dlgm").textContent=T(msg);dlgYes=yes||null;
   $("dlgy").textContent=o.ok||"OK";$("dlgc").hidden=!!o.info;if(!o.info)$("dlgc").textContent="Cancel";
-  if(typeof $("dlgy").focus==="function")$("dlgy").focus()}
+  // o.danger: the button deletes something; it turns red and Cancel takes the focus, so Enter never deletes by accident
+  $("dlgy").classList.toggle("danger",!!o.danger);$("dlgy").classList.toggle("primary",!o.danger);
+  var f=o.danger&&!o.info?$("dlgc"):$("dlgy");if(typeof f.focus==="function")f.focus()}
 function closeDlg(run){var d=$("dlg"),y=dlgYes;d.hidden=true;dlgYes=null;if(run&&y)y()}
 $("dlgy").addEventListener("click",function(){closeDlg(true)});$("dlgc").addEventListener("click",function(){closeDlg(false)});
 $("dlg").addEventListener("click",function(e){if(e.target===this)closeDlg(false)});
@@ -1224,7 +1262,7 @@ $("ddr").addEventListener("click",function(){ask(X("Move your data back to the s
 $("autos").addEventListener("change",function(){var box=this,want=box.checked;
   api("/api/desktop/autostart",{method:"POST",body:JSON.stringify({on:want})}).then(function(j){box.checked=!!j.on;if(DESK)DESK.autostart=!!j.on},function(e){box.checked=!want;alert(T(e.message))})});
 // pre: the data, when it already came with the session (see accBoot)
-function accStart(u,pre){ACC.user=u;accUI();if(u.must_change)accNewPw();else accLoad(pre)}
+function accStart(u,pre){ACC.user=u;$("pfov").hidden=true;accUI();if(u.must_change)accNewPw();else accLoad(pre)}
 function accNewPw(){
   fmOpen({title:X("Choose your password","Επιλέξτε τον κωδικό σας"),intro:X("You signed in with the default password. Choose your own password to continue.","Συνδεθήκατε με τον προεπιλεγμένο κωδικό. Επιλέξτε δικό σας κωδικό για να συνεχίσετε."),
     fields:[{id:"n",label:X("New password (at least 8 characters)","Νέος κωδικός (τουλάχιστον 8 χαρακτήρες)"),type:"password",auto:"new-password"},{id:"n2",label:X("New password again","Νέος κωδικός ξανά"),type:"password",auto:"new-password"}],
@@ -1252,7 +1290,7 @@ function accFail(e){
   if(e&&e.status&&e.status<500){ACC.err=T(e.message);accStatusUI();return}   // the server said no (e.g. too large): trying again will not help
   ACC.err=X("Cannot reach the server. Your latest changes are not saved yet; trying again…","Δεν υπάρχει σύνδεση με τον διακομιστή. Οι τελευταίες αλλαγές σας δεν έχουν αποθηκευτεί ακόμη· νέα προσπάθεια…");accStatusUI();
   ACC.tries++;clearTimeout(ACC.timer);ACC.timer=setTimeout(function(){if(ACC.loaded)accFlush();else accLoad()},Math.min(60000,3000*ACC.tries))}
-function accSignedOut(msg){ACC.user=null;ACC.loaded=ACC.dirty=false;ACC.err="";accUI();accStatusUI();applyData(JSON.parse(STATE0));$("usrm").hidden=true;accLogin(msg)}
+function accSignedOut(msg){ACC.user=null;$("pfov").hidden=true;ACC.loaded=ACC.dirty=false;ACC.err="";accUI();accStatusUI();applyData(JSON.parse(STATE0));$("usrm").hidden=true;accLogin(msg)}
 // pick up changes made on another device (not while something is being typed here: loading would clear it)
 function accRefresh(){var a=document.activeElement,typing=a&&/^(INPUT|TEXTAREA)$/.test(a.tagName)&&a.value!=="";
   if(!ACC.loaded||ACC.dirty||ACC.saving||st||document.hidden||editing||typing||!$("fmm").hidden)return;
@@ -1329,6 +1367,10 @@ function walkTr(root){
   if(root.nodeType!==1||inNotr(root))return;
   var w=document.createTreeWalker(root,5,{acceptNode:function(n){return n.nodeType===1&&(n.tagName==="SCRIPT"||n.tagName==="STYLE"||n.hasAttribute("data-notr"))?2:1}}),n=root;
   do{if(n.nodeType===3)doText(n);else TRATTR.forEach(function(a){if(n.hasAttribute(a))doAttr(n,a)})}while(n=w.nextNode())}
+// "How it works" explanations start folded; each one remembers being opened, on this device
+(function(){var o={};try{o=JSON.parse(localStorage.getItem("xpence-hints")||"{}")||{}}catch(e){}
+  document.querySelectorAll("details.hintd").forEach(function(d){var k=d.getAttribute("data-hd");if(o[k])d.open=true;
+    d.addEventListener("toggle",function(){if(d.open)o[k]=1;else delete o[k];try{localStorage.setItem("xpence-hints",JSON.stringify(o))}catch(e){}})})})();
 function applyLang(){
   if(typeof document==="undefined"||!document.createTreeWalker||!ORIG)return;
   var r=document.documentElement;if(r)r.lang=LANG;
@@ -1340,7 +1382,7 @@ function applyLang(){
       else if(m.type==="characterData"){doText(m.target)}
       else if(m.type==="attributes"){doAttr(m.target,m.attributeName)}})});
     LOBS.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:TRATTR})}
-  syncLangUI();if(typeof accUI==="function")accUI()}
+  syncLangUI();if(typeof accUI==="function")accUI();if(typeof mrLabels==="function")mrLabels()}
 function setLang(l,fromData){
   if(l!=="el")l="en";
   LANG=l;state.lang=l;
@@ -1437,7 +1479,7 @@ function renderSearch(){
 
 /* ---- recurring expenses: pause / resume / end ---- */
 function syncEnd(){$("endw").hidden=(+$("freq").value===0)}
-$("freq").addEventListener("change",syncEnd);
+$("freq").addEventListener("change",function(){freqTouched=true;syncEnd()});
 function renderRec(){
   var ci=idxOf(today()),all=LS().items.filter(function(it){return it.freq!==0}),np=0;
   all.forEach(function(it){if(recStatus(it,ci)==="paused")np++});
@@ -1618,7 +1660,12 @@ $("frp").addEventListener("click",function(){document.body.classList.add("printr
   setTimeout(function(){document.body.classList.remove("printrep")},60000)});
 
 /* ---- merchants: name suggestions, auto category, logos ---- */
-var catTouched=false,acItems=[],acI=-1;
+var catTouched=false,acItems=[],acI=-1,exactKey=null;
+// the category of a name typed in full: the one last saved with it, an earlier expense with that name, or the merchant's
+function exactCat(name){var k=nrm(name);if(k.length<2)return null;
+  var l=state.learn&&state.learn[k];if(l&&catOf(l.c))return l.c;
+  var c=null,last="";state.items.forEach(function(it){if(nrm(it.name)===k&&k!==nrm(it.cat)&&catOf(it.cat)&&it.date>=last){last=it.date;c=it.cat}});if(c)return c;
+  var m=mOf(name);return m&&(nrm(m.en)===k||nrm(m.el)===k)&&catOf(m.cat)?m.cat:null}
 function showSug(s){var el=$("msug");if(!el)return;
   if(!s||(!s.cat&&!s.mer)){el.hidden=true;el.innerHTML="";return}
   var h='';if(s.mer)h+=(s.mer.logo?logoTile(s.mer.logo):"")+'<b data-notr>'+esc(mName(s.mer))+'</b>';
@@ -1643,9 +1690,12 @@ function acMark(i){acI=i;Array.prototype.forEach.call($("acl").children,function
   if(i>=0){var li=$("acl").children[i];li.scrollIntoView&&li.scrollIntoView({block:"nearest"});$("name").setAttribute("aria-activedescendant","aco"+i)}else $("name").removeAttribute("aria-activedescendant")}
 function acPick(i){var e=acItems[i];if(!e)return;var nm=$("name");nm.value=e.label;delete nm.dataset.auto;
   if(e.cat&&catOf(e.cat)&&!editing){$("cat").value=e.cat;syncCat()}
-  acHide();if(!editing)showSug(sugOf(e.label));$("amt").focus()}
+  exactKey=nrm(e.label);acHide();if(!editing)showSug(sugOf(e.label));$("amt").focus()}
 $("name").addEventListener("input",function(){var v=this.value;acRender(v);if(editing){showSug(null);return}
-  var sg=sugOf(v);showSug(sg);if(sg&&sg.cat&&!catTouched&&$("cat").value!==sg.cat){$("cat").value=sg.cat;syncCat()}});
+  var sg=sugOf(v);showSug(sg);var ex=exactCat(v),k=nrm(v);
+  // a full name picks its category even after the user chose one, but only once, so they can still change it afterwards
+  if(ex){if(k!==exactKey){exactKey=k;if($("cat").value!==ex){$("cat").value=ex;syncCat()}}return}
+  exactKey=null;if(sg&&sg.cat&&!catTouched&&$("cat").value!==sg.cat){$("cat").value=sg.cat;syncCat()}});
 $("name").addEventListener("keydown",function(e){if($("acl").hidden)return;
   if(e.key==="ArrowDown"){e.preventDefault();acMark(Math.min(acI+1,acItems.length-1))}
   else if(e.key==="ArrowUp"){e.preventDefault();acMark(Math.max(acI-1,-1))}
@@ -1814,6 +1864,16 @@ function applyView(){if(!document.querySelector)return;var sh=state.show||{};
 function viewOpen(v){var p=$("viewp");p.hidden=!v;$("viewb").setAttribute("aria-expanded",String(v));if(v){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}}
 $("viewb").addEventListener("click",function(e){e.stopPropagation();viewOpen($("viewp").hidden)});
 $("viewx").addEventListener("click",function(){viewOpen(false)});
+// phones: Simple, View, Edit and Settings sit behind the ⋯ button; picking one closes the menu
+function moreOpen(v){$("hmw").classList.toggle("open",v);$("hmb").setAttribute("aria-expanded",String(v))}
+$("hmb").addEventListener("click",function(e){e.stopPropagation();var v=!$("hmw").classList.contains("open");moreOpen(v);if(v)$("simpleb").focus()});
+var hmLast=null;$("hmw").addEventListener("click",function(e){hmLast=e.target.closest("button");moreOpen(false)},true);
+document.addEventListener("click",function(e){if($("hmw").classList.contains("open")&&!e.target.closest("#hmw")&&!e.target.closest("#hmb"))moreOpen(false)});
+document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;
+  if($("hmw").classList.contains("open")){moreOpen(false);$("hmb").focus();return}
+  // a panel opened from the menu hands focus back to a button that is now hidden: give it to ⋯ instead
+  setTimeout(function(){var a=document.activeElement;
+    if(hmLast&&$("hmb").offsetParent&&(!a||a===document.body||(a.closest&&a.closest("#hmw"))))$("hmb").focus();hmLast=null},0)});
 $("gear").addEventListener("click",function(){if(!$("opt").hidden)viewOpen(false)});
 document.addEventListener("click",function(e){if(!$("viewp").hidden&&!e.target.closest("#viewp")&&!e.target.closest("#viewb"))viewOpen(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("viewp").hidden){viewOpen(false);$("viewb").focus()}});

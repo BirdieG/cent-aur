@@ -16,6 +16,12 @@ def check(cond, what):
         failures.append(what)
 
 
+def profile(page):
+    """Opens Profile (backups and the account block), unless it is open already."""
+    if page.is_hidden("#pfov"):
+        page.click("#pfb")
+
+
 def data_of(page):
     return page.evaluate("fetch('/api/data',{cache:'no-store'}).then(r=>r.json())")
 
@@ -217,6 +223,11 @@ with sync_playwright() as pw:
     check("Offline thing" in names(A), "the change is saved once the connection is back")
 
     # ---- administrator: users and backup
+    check(A.text_content("#gear").strip() == "Settings", "the settings button says Settings")
+    profile(A)
+    check(A.is_visible("#pfov #ex") and A.is_visible("#pfov #acw"), "Profile shows the backups and the account")
+    check(A.query_selector('.slot[data-card="data"]') is None, "Your data is no longer a card on the page")
+    check(A.is_visible("#pfov #inc") and A.query_selector('.slot[data-card="budget"]') is None, "the budget is set in Profile, not in a card")
     A.click('[data-ac="usrm"]')
     A.wait_for_selector(".usrr")
     # ad blockers hide elements named like adverts (EasyList has "###adtop") on every site, so avoid such names
@@ -243,7 +254,9 @@ with sync_playwright() as pw:
     C.wait_for_selector("#fmm", state="hidden")
     C.wait_for_selector("#acw:not([hidden])")
     check(names(C) == [], "the new user starts with empty data")
+    profile(C)
     check(not C.is_visible('[data-ac="usrm"]'), "a normal user has no Manage users button")
+    C.click("#pfx")
     add_expense(C, "Maria only", 1)
     check("Maria only" not in names(A), "users cannot see each other's data")
     check(C.evaluate("fetch('/api/admin/users').then(r=>r.status)") == 403, "a normal user cannot use the admin API")
@@ -258,6 +271,7 @@ with sync_playwright() as pw:
     check("Maria only" not in (C.text_content("#sec") or ""), "a disabled user is signed out and their data leaves the screen")
 
     # ---- signing out
+    profile(A)
     A.click('[data-ac="out"]')
     A.wait_for_selector("#dlg:not([hidden])")
     A.click("#dlgy")

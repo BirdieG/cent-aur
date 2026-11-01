@@ -54,7 +54,7 @@ after uploading, before anyone else finds the site.
 
 ## 6. Add your family
 
-**Your data → Account → Manage users**: add, rename, reset passwords, make someone an administrator,
+**Profile → Account → Manage users** (top right): add, rename, reset passwords, make someone an administrator,
 disable or delete users. Everyone has their own private data.
 
 ## 7. On a phone

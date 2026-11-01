@@ -23,6 +23,12 @@ def check(cond, what):
         failures.append(what)
 
 
+def profile(page):
+    """Opens Profile (backups and the account block), unless it is open already."""
+    if page.is_hidden("#pfov"):
+        page.click("#pfb")
+
+
 def status(url, headers=None):
     try:
         return urllib.request.urlopen(urllib.request.Request(url, headers=headers or {})).status
@@ -66,7 +72,9 @@ with sync_playwright() as pw:
         page.wait_for_selector("#fmm", state="hidden")
         check(page.text_content("#act") == "This PC", "offline: the account block says This PC")
         check("Working offline" in page.text_content("#ach"), "offline: it says the data stays on this PC")
+        profile(page)
         check(page.is_visible('[data-ac="leave"]') and not page.is_visible('[data-ac="usrm"]'), "offline: a way to sign in, no user management")
+        page.click("#pfx")
         add_expense(page, "Offline coffee", 3.5)
 
         page.click("#gear")
@@ -101,6 +109,7 @@ with sync_playwright() as pw:
         check(page.evaluate("document.getElementById('autos').checked"), "restarted: Start with Windows is still on")
         check(page.evaluate("document.getElementById('ddp').textContent") == "/data/moved", "restarted: still uses the chosen data folder")
 
+        profile(page)
         page.click('[data-ac="leave"]')
         page.wait_for_selector("#dlg:not([hidden])")
         page.click("#dlgy")
@@ -130,6 +139,7 @@ with sync_playwright() as pw:
     elif phase == "third":
         page.wait_for_function("document.querySelector('#sec') && document.querySelector('#sec').textContent.includes('Online rent')")
         check(True, "restarted: still signed in to the server, with its data")
+        profile(page)
         page.click('[data-ac="usrm"]')
         page.wait_for_selector(".usrr")
         page.click('[data-um="add"]')
@@ -156,6 +166,7 @@ with sync_playwright() as pw:
         page.wait_for_function("document.querySelector('#sec') && document.querySelector('#sec').textContent.includes('Offline coffee')")
         check(True, "back to the standard folder, with the data")
 
+        profile(page)
         page.click('[data-ac="leave"]')
         page.wait_for_selector("#dlg:not([hidden])")
         page.click("#dlgy")

@@ -75,7 +75,7 @@ HTTPS. Upload the contents of [`public/`](public) to the site's web folder and o
 
 1. Sign in as **`admin`** / **`admin`**.
 2. Choose your own password (required before anything else works).
-3. Add your family under **Your data → Account → Manage users**.
+3. Add your family under **Profile → Account → Manage users** (top right).
 
 The database is created automatically in a `cent-aur-data` folder next to the web folder, out of reach
 of the web. The full guide, including Cloudflare, backups and password recovery, is in
@@ -103,11 +103,11 @@ nothing to install). It opens the same Cent-aur page in its own window and start
   ticked (the default) the sign-in is kept, encrypted for your Windows user, so the next start goes
   straight to your data. Unticked, it is never written to disk and ends when you close the app.
 - **Work offline on this PC:** no account and no internet needed; the data is kept in a SQLite
-  database in `%APPDATA%\Cent-aur` on this PC only. **Options → Data folder** moves it (with the
+  database in `%APPDATA%\Cent-aur` on this PC only. **Settings → Data folder** moves it (with the
   app's settings) to another folder, such as another drive, and back.
 
-The two are kept apart, and you can switch from the account block in **Your data**. **Start with
-Windows** is in the Options (the gear). Starting Cent-aur a second time brings the open window to the
+The two are kept apart, and you can switch from the account block in **Profile**. **Start with
+Windows** is in **Settings** (the gear). Starting Cent-aur a second time brings the open window to the
 front.
 
 Build it with Docker (on Linux, macOS or Windows), giving the server the sign-in form should offer:
