@@ -69,6 +69,7 @@ button.ghost{background:none;color:var(--muted)}
 button.danger{background:var(--danger);color:var(--card);border-color:var(--danger);font-weight:600}
 button.del{background:none;border:none;color:var(--danger);padding:4px 8px;font-size:1.1rem}
 button.ed{background:none;border:none;color:var(--muted);padding:4px 8px;font-size:1.1rem}
+button.more{display:none;background:none;border:none;color:var(--muted);padding:4px 8px}button.more:hover,button.more[aria-expanded="true"]{color:var(--text)}
 button.ed2{background:none;border:none;color:var(--muted);padding:4px 8px;font-size:1.1rem;display:inline-flex;align-items:center}button.ed2:hover,button.ed:hover{color:var(--text)}
 .act{display:flex;align-items:center}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
@@ -146,6 +147,8 @@ details[open]>summary::before{transform:rotate(90deg)}
 .rem h2 svg{width:20px;height:20px;vertical-align:-4px;margin-right:6px;color:var(--danger)}
 .ri{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
 .ra{display:flex;gap:6px;flex-wrap:wrap}
+.rq{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}.rq input{width:96px;padding:4px 8px}.ra .primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.est{color:var(--muted);font-style:italic;font-weight:400}small.est{display:block;font-size:.78rem;margin-top:2px}.row.est{font-style:italic;color:var(--muted)}.row.est .num{color:var(--muted)}
 .later{width:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px;background:var(--bg);border-radius:10px;font-size:.9rem}
 .later button{padding:3px 10px;font-size:.85rem}
 .later input{padding:3px 8px}
@@ -160,7 +163,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .gm{color:var(--muted);font-size:.8rem;margin-top:4px}
 .ib.gi svg{width:26px;height:26px}
 .cf label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cbo{display:flex;gap:14px;flex-wrap:wrap}
+
 #cd{width:90px}
 .ip{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px}
 .icb{padding:3px;display:flex;justify-content:center;border-radius:9px}
@@ -238,7 +241,7 @@ body.editing #flL,body.editing #flB{position:static;max-height:none;overflow:vis
 .brand h1{white-space:nowrap}
 @media (max-width:620px){.hbar .editb span,.hbar .helpb span,.hbar .gear span{display:none}.hbar .editb,.hbar .helpb{padding:6px 5px}.langbtn{padding:6px 4px;gap:4px}.langbtn .chev,.langbtn #langn{display:none}.brand{gap:8px}.brand>svg{width:40px;height:40px}.brand>img{width:64px;height:64px}.hbar{gap:0}.brand h1{font-size:1.3rem}.brand>svg{width:36px;height:36px}}
 /* phones and tablets (the labelled bar needs about 1000px): Language, Help and Profile stay in the bar at finger size;
-   Simple, View, Edit and Settings move into the ⋯ menu. On the narrowest phones the bar moves under the name rather than pushing the page sideways. */
+   Simple, Sections, Edit and Settings move into the ⋯ menu. On the narrowest phones the bar moves under the name rather than pushing the page sideways. */
 @media (max-width:1000px){
 .brand{flex-wrap:wrap;row-gap:2px}
 .hbar .langbtn,.hbar .helpb,.hbar .hmb{min-width:44px;min-height:44px;justify-content:center;padding:6px}
@@ -349,7 +352,11 @@ body.nL.nR:not(.editing) .cols{grid-template-columns:minmax(0,900px);justify-con
 @media print{.slot[data-card="trend"]{display:none}}
 
 #ds{margin-top:8px;font-size:.9rem}
-@media (max-width:620px){form{grid-template-columns:1fr 1fr}#amt,.nw,.fa{grid-column:1/-1}.row{grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px}.row .num{font-size:.9rem}}
+@media (max-width:620px){form{grid-template-columns:1fr 1fr}#amt,.nw,.fa{grid-column:1/-1}.row{grid-template-columns:minmax(0,1fr) auto;gap:2px 6px}.row>div:first-child{grid-column:1/-1}.row .num{font-size:.95rem;text-align:left}.row .yr{display:none}
+  /* rows on two lines: name above, amount and ⋯ below; ⋯ opens pause, edit and delete */
+  .row .act{justify-content:flex-end;gap:2px}.row .act>.more{display:inline-flex;order:9}.row .num small{display:inline;margin-left:3px}.row .act>:not(.more){display:none}.row.open .act>*{display:inline-flex}
+  .act button,button.ed,button.del,button.ed2,button.more{min-width:44px;min-height:44px;justify-content:center;align-items:center}
+  .pill{min-height:40px;padding:8px 14px;font-size:.88rem}}
 
 .srch{display:flex;gap:6px;margin:0 0 8px}.srch input{flex:1;min-width:0}
 .tagbar{margin-bottom:8px}.tagbar:empty{display:none}
@@ -424,9 +431,25 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 .usrr .t{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}.usrr .t b{font-size:1rem}.usrr .m{color:var(--muted);font-size:.82rem}
 .usrr .b{display:flex;flex-wrap:wrap;gap:6px}.usrr .b button{padding:4px 10px;font-size:.85rem}
 .usrr.off{opacity:.6}.bdg{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:.75rem;color:var(--muted)}.bdg.a{border-color:var(--accent);color:var(--accent)}
-#usrm{z-index:94}#fmm{z-index:97}
+#usrm{z-index:94}#xlm{z-index:94}#rmm{z-index:94}
+.vyw{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted)}.vyw input{width:auto;margin:0}.rqf{color:var(--muted);font-size:.85rem;align-self:center}.rmw{grid-column:1/-1}.rmw.fu .rmf label:first-child{display:none}.rmw .nlk{display:inline-flex;align-items:center;gap:6px}.rmw .nlk svg{width:15px;height:15px}.rmi{color:var(--muted);font-size:.85rem}
+.rmf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.rmf label{display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted);flex:1;min-width:140px}.rmf #rmx{padding:9px 12px}
+.rmr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.rmr:first-child{border-top:0}.rmr small{display:block;color:var(--muted)}.rmr .neg{color:var(--danger)}
+.rmr.ed1{flex-direction:column;align-items:stretch}.rme{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.rme label{display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted);flex:1;min-width:150px}.rmr .scfa{margin-top:8px}
+.xlw{width:min(640px,100%)}.xlw h4{margin:14px 0 4px;font-size:.92rem}
+.xlr{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}.xlr>span{flex:1;min-width:0;overflow-wrap:anywhere}.xlr small{color:var(--muted)}.xlr select{width:min(260px,55%)}
+.xlck{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:.9rem}
+.xlt{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}.xlt table{width:100%;border-collapse:collapse;font-size:.85rem}.xlt th,.xlt td{padding:6px 8px;text-align:left;border-top:1px solid var(--line);vertical-align:top}.xlt tr:first-child th{border-top:0;color:var(--muted);font-weight:600}.xlt .num{text-align:right;white-space:nowrap}.xlt small{display:block;color:var(--muted)}
+.xls{margin:12px 0 0}.xls small{color:var(--muted)}#fmm{z-index:97}
 /* the button of an open menu or popup stays highlighted */
 .hbar button[aria-expanded="true"],.hbar .hmb[aria-expanded="true"],button.isopen{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* phones: everything tappable at least 40px tall, row icons 44px (set with the expense rows above) */
+@media (max-width:620px){input[type=checkbox],.vyw input{width:20px;height:20px;flex:none}.chip,.bchip,.mc,.tgc{min-height:40px}.nlk{min-height:40px;display:inline-flex;align-items:center}
+  summary,.hintd>summary,.mbd summary{min-height:40px;align-items:center}.mbd summary{padding:10px 0}.hintd>summary{display:flex}
+  /* iPhone zooms the page into any box with text under 16px */
+  input,select,textarea{font-size:max(1em,16px)}.ordsel,.rq input,.endw input{font-size:16px}
+  /* Clear all moves under the list (app.js), away from sort and currency */
+  #clear{display:block;margin:14px 0 0 auto}}
 </style>
 </head>
 <body>
@@ -438,10 +461,10 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="hbar"><div class="langdd" id="langdd"><svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
 <symbol id="flag-en" viewBox="0 0 60 30" preserveAspectRatio="none"><clipPath id="ukc"><path d="M30,15h30v15zv15h-30zh-30v-15zv-15h30z"/></clipPath><path d="M0,0v30h60v-30z" fill="#012169"/><path d="M0,0L60,30M60,0L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0L60,30M60,0L0,30" clip-path="url(#ukc)" stroke="#C8102E" stroke-width="4"/><path d="M30,0v30M0,15h60" stroke="#fff" stroke-width="10"/><path d="M30,0v30M0,15h60" stroke="#C8102E" stroke-width="6"/></symbol>
 <symbol id="flag-el" viewBox="0 0 27 18" preserveAspectRatio="none"><rect width="27" height="18" fill="#0D5EAF"/><path d="M0,3.6H27M0,10.8H27M5,14.4H27M10,7.2H27M0,0H27" stroke="#fff" stroke-width="2" transform="translate(0,0)"/><rect width="10" height="10" fill="#0D5EAF"/><path d="M5,0V10M0,5H10" stroke="#fff" stroke-width="2"/></symbol>
-</defs></svg><button type="button" id="langb" class="langbtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language" title="Language"><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-en" id="langu"/></svg><span id="langn" data-notr>English</span><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><ul class="langm" id="langm" role="listbox" aria-label="Language" hidden><li role="option" tabindex="-1" data-l="en" data-notr><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-en"/></svg><span>English</span></li><li role="option" tabindex="-1" data-l="el" data-notr><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-el"/></svg><span>Ελληνικά</span></li></ul></div><button type="button" class="ghost editr" id="editr" hidden>Reset layout</button><button type="button" class="ghost hmb" id="hmb" aria-expanded="false" aria-controls="hmw" aria-label="More" title="More"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><div class="hmw" id="hmw"><button type="button" class="ghost editb" id="simpleb" aria-pressed="false" title="Switch between the full and the simplified view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h6"/></svg><span>Simple</span></button><button type="button" class="ghost editb" id="viewb" aria-expanded="false" aria-controls="viewp" title="Choose which cards to show"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>View</span></button><button type="button" class="ghost editb" id="editb" aria-pressed="false" title="Edit layout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 00-3-3L5 17z"/><path d="M14.5 7.5l3 3"/></svg><span>Edit</span></button>
+</defs></svg><button type="button" id="langb" class="langbtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language" title="Language"><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-en" id="langu"/></svg><span id="langn" data-notr>English</span><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><ul class="langm" id="langm" role="listbox" aria-label="Language" hidden><li role="option" tabindex="-1" data-l="en" data-notr><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-en"/></svg><span>English</span></li><li role="option" tabindex="-1" data-l="el" data-notr><svg class="flg" width="22" height="15" aria-hidden="true"><use href="#flag-el"/></svg><span>Ελληνικά</span></li></ul></div><button type="button" class="ghost editr" id="editr" hidden>Reset layout</button><button type="button" class="ghost hmb" id="hmb" aria-expanded="false" aria-controls="hmw" aria-label="More" title="More"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><div class="hmw" id="hmw"><button type="button" class="ghost editb" id="simpleb" aria-pressed="false" title="Switch between the full and the simplified view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h6"/></svg><span>Simple</span></button><button type="button" class="ghost editb" id="viewb" aria-expanded="false" aria-controls="viewp" title="Choose which cards to show"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7.5" height="16" rx="1.8"/><rect x="13.5" y="4" width="7.5" height="7" rx="1.8"/><rect x="13.5" y="13" width="7.5" height="7" rx="1.8"/></svg><span>Sections</span></button><button type="button" class="ghost editb" id="editb" aria-pressed="false" title="Edit layout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 00-3-3L5 17z"/><path d="M14.5 7.5l3 3"/></svg><span>Edit</span></button>
 <button type="button" class="ghost gear" id="gear" aria-label="Settings" aria-expanded="false" title="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button></div><button type="button" class="ghost helpb" id="helpb" aria-expanded="false" aria-label="Help" title="Help"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9.3a2.9 2.9 0 015.6 1c0 1.9-2.8 2.4-2.8 4"/><path d="M12 17.6h.01"/></svg><span>Help</span></button><button type="button" class="ghost helpb" id="pfb" aria-expanded="false" aria-label="Profile" aria-haspopup="dialog" title="Profile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profile</span></button></div>
 <div class="opt" id="viewp" hidden>
-  <div class="head"><h2>View</h2><button type="button" class="ghost" id="viewx" aria-label="Close view">✕</button></div>
+  <div class="head"><h2>Sections</h2><button type="button" class="ghost" id="viewx" aria-label="Close sections">✕</button></div>
   <p class="hint" style="margin:0 0 8px">Choose what you want to see. Hidden cards are removed from the screen; your data is kept.</p>
   <label class="oc hl"><input type="checkbox" id="fulll"> Show full lists (no scrolling)</label>
   <hr class="sep">
@@ -497,7 +520,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   </ul>
   <h3>4. Bills &amp; reminders</h3>
   <ul>
-    <li>Categories marked as bills (mobile, electricity, water, internet, common charges&hellip;) start reminding you only <b>after you add their first payment</b>. If the next one is not paid one month after the last payment date, it shows <b>in red at the top</b> of This month until you pay it.</li>
+    <li>When you add an expense in a category marked as a bill (mobile, electricity, water, internet, common charges&hellip;), choose <b>Set a reminder</b>: how often it repeats (one time, every week, every month&hellip;) and when it is next due. Three days before, it shows <b>in red at the top</b> of This month until you pay it. Adding the bill moves the reminder on to its next date by itself. See, change or delete them all in <b>Profile → Reminders</b>.</li>
     <li>Press <b>Add expense</b> to record the payment, or <b>Remind me later</b> to hide it for a few days.</li>
     <li>Bills with changing amounts show the <b>previous payment</b>, so you can see if you pay more or less, and the <b>Bills history</b> lists them all.</li>
   </ul>
@@ -519,8 +542,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   </ul>
   <h3>Spending by month</h3>
   <p>The <b>Spending by month</b> card shows a year at a glance: a line (or <b>Bars</b>) for what you spent each month and a dashed line for your budget. Months over budget turn red; future months are lighter because they only include your recurring expenses. Point at or tap a month to see the total, the difference from the month before and the biggest categories. Use &#9664; &#9654; to change the year, or <b>Show as table</b> for the numbers.</p>
-  <h3>View: show only what you need</h3>
-  <p>The <b>View</b> button (the eye, next to Simple) lets you tick which cards to show: Insights, Savings goals, Spending by month, What if, Savings, Extra money, Bills history and By category. A card you untick disappears completely and the page rearranges itself; your data is kept and comes back when you tick it again.</p>
+  <h3>Sections: show only what you need</h3>
+  <p>The <b>Sections</b> button (next to Simple) lets you tick which cards to show: Insights, Savings goals, Spending by month, What if, Savings, Extra money, Bills history and By category. Savings goals, Spending by month and What if start unticked. A card you untick disappears completely and the page rearranges itself; your data is kept and comes back when you tick it again.</p>
   <h3>What if I cut back?</h3>
   <p>Drag the slider next to a recurring expense or bill to see how much you would save per month and per year. Nothing changes until you press <b>Apply</b> (you can undo it). If you add an expense that looks the same as one you already have, Cent-aur asks before adding it.</p>
   <h3>Your data</h3>
@@ -574,8 +597,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   </ul>
   <h3>Έξοδα ανά μήνα</h3>
   <p>Η κάρτα <b>Έξοδα ανά μήνα</b> δείχνει ολόκληρη τη χρονιά με μια ματιά: μια γραμμή (ή <b>Μπάρες</b>) για όσα ξοδέψατε κάθε μήνα και μια διακεκομμένη γραμμή για τον προϋπολογισμό σας. Οι μήνες που ξεπερνούν τον προϋπολογισμό γίνονται κόκκινοι· οι μελλοντικοί μήνες είναι πιο αχνοί γιατί περιλαμβάνουν μόνο τα επαναλαμβανόμενα έξοδα. Δείξτε ή πατήστε έναν μήνα για να δείτε το σύνολο, τη διαφορά από τον προηγούμενο μήνα και τις μεγαλύτερες κατηγορίες. Με το &#9664; &#9654; αλλάζετε έτος και με το <b>Εμφάνιση ως πίνακα</b> βλέπετε τα ποσά.</p>
-  <h3>Προβολή: δείτε μόνο ό,τι χρειάζεστε</h3>
-  <p>Το κουμπί <b>Προβολή</b> (το μάτι, δίπλα στο Απλή) σας αφήνει να επιλέξετε ποιες κάρτες θα εμφανίζονται: Συμβουλές, Στόχοι αποταμίευσης, Έξοδα ανά μήνα, Κι αν περικόψω, Αποταμιεύσεις, Έκτακτα έσοδα, Ιστορικό λογαριασμών και Ανά κατηγορία. Μια κάρτα που την ξε-τσεκάρετε εξαφανίζεται εντελώς και η σελίδα αναδιατάσσεται· τα δεδομένα σας διατηρούνται και επιστρέφουν όταν την ξανα-επιλέξετε.</p>
+  <h3>Ενότητες: δείτε μόνο ό,τι χρειάζεστε</h3>
+  <p>Το κουμπί <b>Ενότητες</b> (δίπλα στο Απλή) σας αφήνει να επιλέξετε ποιες κάρτες θα εμφανίζονται: Συμβουλές, Στόχοι αποταμίευσης, Έξοδα ανά μήνα, Κι αν περικόψω, Αποταμιεύσεις, Έκτακτα έσοδα, Ιστορικό λογαριασμών και Ανά κατηγορία. Οι Στόχοι αποταμίευσης, τα Έξοδα ανά μήνα και το Κι αν περικόψω ξεκινούν κρυμμένα. Μια κάρτα που την ξε-τσεκάρετε εξαφανίζεται εντελώς και η σελίδα αναδιατάσσεται· τα δεδομένα σας διατηρούνται και επιστρέφουν όταν την ξανα-επιλέξετε.</p>
   <h3>Κι αν περικόψω;</h3>
   <p>Σύρετε το ρυθμιστικό δίπλα σε ένα επαναλαμβανόμενο έξοδο ή λογαριασμό για να δείτε πόσα θα εξοικονομούσατε τον μήνα και τον χρόνο. Τίποτα δεν αλλάζει μέχρι να πατήσετε <b>Εφαρμογή</b> (μπορείτε να την αναιρέσετε). Αν προσθέσετε έξοδο που μοιάζει με ένα που έχετε ήδη, το Cent-aur ρωτά πριν το προσθέσει.</p>
   <h3>Τα δεδομένα σας</h3>
@@ -607,7 +630,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="ol">Withdraw from savings</div>
   <form id="wf" class="of">
     <input id="wd" type="date" required aria-label="Date">
-    <input id="wa" type="number" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="wa" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="wr" class="w" placeholder="Reason (e.g. car repair)" maxlength="60">
     <span style="display:flex;gap:8px"><button class="primary" type="submit" id="wb">Withdraw</button><button class="ghost" type="button" id="wc" hidden>Cancel</button></span>
   </form>
@@ -620,8 +643,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Savings goals</h2></div>
   <form id="gf" class="of">
     <input id="gn" class="w" placeholder="Goal (e.g. Holiday)" maxlength="60" required aria-label="Goal name">
-    <input id="gt" type="number" step="0.01" min="0.01" placeholder="Target amount" required>
-    <input id="gs" type="number" step="0.01" min="0" placeholder="Saved so far">
+    <input id="gt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Target amount" required>
+    <input id="gs" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Saved so far">
     <label class="w endw"><span>Reach it by (optional)</span><input id="gb" type="month" aria-label="Target month"></label>
     <span class="w" style="display:flex;gap:8px"><button class="primary" type="submit" id="gsb">Add goal</button><button class="ghost" type="button" id="gsc" hidden>Cancel</button></span>
   </form>
@@ -635,7 +658,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="ol">One-off money (a sale, a gift, stocks&hellip;)</div>
   <form id="eof" class="of">
     <input id="eod" type="date" required aria-label="Date">
-    <input id="eoa" type="number" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="eoa" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="eon" class="w" placeholder="What was it? (e.g. sold my bike)" maxlength="60">
     <select id="eot" aria-label="Where does it go"><option value="savings">To savings</option><option value="budget">To budget</option></select>
     <span style="display:flex;gap:8px"><button class="primary" type="submit" id="eob">Add</button><button class="ghost" type="button" id="eoc" hidden>Cancel</button></span>
@@ -655,13 +678,13 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <div id="bs"></div>
   </div>
   <div class="tot big"><span id="mlab">Spent this month</span><b id="m">0.00</b></div>
-  <div class="tot"><span id="ylab">Planned this year</span><b id="y">0.00</b></div>
+  <div class="tot"><span id="ylab">Planned this year</span><b id="y">0.00</b><small class="est" id="yest" data-notr hidden></small></div>
 </div>
 </div>
 <div class="slot" data-card="add"><div class="ctl" hidden><b>Add expense</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card">
   <form id="f">
-    <input id="amt" type="number" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
+    <input id="amt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
     <div class="nw" id="nw"><input id="name" placeholder="Name (e.g. Rent, Mobile phone 2)" aria-label="Name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
     <select id="freq" aria-label="How often">
       <option value="0">One-time</option>
@@ -672,17 +695,20 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
       <option value="4">Quarterly</option>
       <option value="1">Yearly</option>
     </select>
+    <label class="vyw" id="vyw" hidden><input type="checkbox" id="vy"> <span>The amount changes each time</span></label>
     <div class="dd" id="dd"><input type="hidden" id="cat" value="Housing"><button type="button" class="ddb" id="ddb" aria-haspopup="true" aria-expanded="false"></button><div class="ddm" id="ddm" hidden></div></div>
     <input id="dt" type="date" title="Date (due date for bills)" aria-label="Date" required>
     <input id="tags" list="taglist" placeholder="Tags (e.g. work, holiday)" maxlength="80" autocomplete="off" aria-label="Tags">
     <datalist id="taglist"></datalist>
+    <div class="rmw" id="rmw" hidden><button type="button" class="nlk" id="rmt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/></svg> Set a reminder</button><span class="rmi" id="rmi" hidden></span>
+      <span class="rmf" id="rmf" hidden><label><span>Repeats</span><select id="rmr"><option value="once">One time</option><option value="d">Every day</option><option value="w">Every week</option><option value="2w">Every 2 weeks</option><option value="m" selected>Every month</option><option value="2m">Every 2 months</option><option value="3m">Every 3 months</option><option value="6m">Every 6 months</option><option value="y">Every year</option></select></label><label><span>Next reminder</span><input id="rmd" type="date"></label><button type="button" class="ghost" id="rmx" aria-label="No reminder" title="No reminder">✕</button></span></div>
     <div class="ntw"><button type="button" class="nlk" id="nlk">+ Add note</button><textarea id="note" rows="2" maxlength="300" placeholder="Note (e.g. paid by card, refund pending)" aria-label="Note" hidden></textarea></div>
     <label class="endw" id="endw"><span>Ends after (optional)</span><input id="endm" type="month" aria-label="Last month it counts"></label>
     <span class="fa"><button class="primary" type="submit" id="sb">Add</button><button class="ghost" type="button" id="cc" hidden>Cancel</button></span>
   </form>
   <p class="hint msug" id="msug" hidden></p>
   <p class="hint" id="lp"></p>
-  <details class="hintd" data-hd="add"><summary>How it works</summary><p class="hint">The date decides which month an expense belongs to. Bills (mobile phone, electricity, water, internet, Κοινόχρηστα and any category you mark as a bill) are one-time payments: add one each time you pay. A bill is reminded only after its first payment is added: if the next one is not paid one month after the last payment date, Cent-aur reminds you.</p></details>
+  <details class="hintd" data-hd="add"><summary>How it works</summary><p class="hint">The date decides which month an expense belongs to. Bills (mobile phone, electricity, water, internet, Κοινόχρηστα and any category you mark as a bill) start as one-time payments, so you add one each time you pay and can compare them; choose another How often if a bill is always the same amount. When you add a bill you can choose Set a reminder: how often it repeats and when it is next due. Paying the bill moves the reminder on to its next date. If something repeats but its amount changes (like electricity), tick The amount changes each time: you add each payment when it comes, and the months ahead show an estimate. A one-time expense dated in the future can have a reminder of its own too.</p></details>
 </div>
 </div>
 <div class="slot" data-card="expenses"><div class="ctl" hidden><b>Expenses</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
@@ -738,11 +764,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
       <input id="cn" placeholder="Category name (e.g. Mobile phone 2)">
       <input id="cg" placeholder="Group (optional): categories with the same group are combined in By category">
       <div class="ip" id="ip"></div>
-      <label><input type="checkbox" id="cb"> This is a bill (remind me when the next payment is due)</label>
-      <div class="cbo" id="cbo" hidden>
-        <label>Due day of the month <input id="cd" type="number" min="1" max="31" placeholder="auto"></label>
-        <label>Repeats every <select id="ce"><option value="1">month</option><option value="2">2 months</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">year</option></select></label>
-      </div>
+      <label><input type="checkbox" id="cb"> This is a bill (lets you set a reminder when you add one)</label>
       <div class="fa"><button type="button" class="primary" id="cs">Save category</button><button type="button" class="ghost" id="cx">Cancel</button></div>
     </div>
   </div>
@@ -783,7 +805,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <div class="yb" style="margin-top:0"><span>Earned</span><b id="fye" class="pos">0.00</b></div>
     <div class="yb" style="margin-top:0"><span>Expenses</span><b id="fyx" class="neg">0.00</b></div>
     <div class="yb" style="margin-top:0"><span>Profit</span><b id="fyp">0.00</b></div>
-    <label class="inc"><span>Set aside for tax (% of profit)</span><input id="fltax" type="number" min="0" max="100" step="0.5" placeholder="0"></label>
+    <label class="inc"><span>Set aside for tax (% of profit)</span><input id="fltax" type="number" inputmode="decimal" min="0" max="100" step="0.5" placeholder="0"></label>
     <div class="yb"><span>Tax to set aside this year</span><b id="fltaxv">0.00</b></div>
   </div>
   <p class="hint">Freelancer earnings and expenses are kept separate: they never change your Personal totals, budget or savings.</p>
@@ -825,11 +847,11 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="card adv" id="fltc">
 <details class="fcd" id="fcd"><summary><h2>Φόρος επιτηδεύματος &middot; tax calculator</h2></summary>
   <p class="hint" id="fctop">Estimate of income tax, ΕΦΚΑ contributions and the τέλος επιτηδεύματος.</p>
-  <label class="inc"><span>Annual revenue</span><input id="fcrev" type="number" step="0.01" min="0" placeholder="from your entries"></label>
-  <label class="inc"><span>Business expenses</span><input id="fcexp" type="number" step="0.01" min="0" placeholder="from your entries"></label>
-  <label class="inc"><span>ΕΦΚΑ contribution per month</span><span style="display:flex;gap:8px;align-items:center"><button type="button" class="pill" id="fcefk1" title="Main pension + health, 1st category, 2026 (approximate)">1st cat. 250.77</button><input id="fcefka" type="number" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc"><span>Annual revenue</span><input id="fcrev" type="number" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
+  <label class="inc"><span>Business expenses</span><input id="fcexp" type="number" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
+  <label class="inc"><span>ΕΦΚΑ contribution per month</span><span style="display:flex;gap:8px;align-items:center"><button type="button" class="pill" id="fcefk1" title="Main pension + health, 1st category, 2026 (approximate)">1st cat. 250.77</button><input id="fcefka" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <label class="inc"><span>Age group (tax year 2026 and later)</span><select id="fcage"><option value="31">31 and over</option><option value="26">26 &ndash; 30</option><option value="25">Up to 25</option></select></label>
-  <label class="inc"><span>Τέλος επιτηδεύματος</span><span style="display:flex;gap:8px;align-items:center"><select id="fcpre" aria-label="Status"><option value="free">Freelancer &ndash; exempt</option><option value="block">Μπλοκάκι &ndash; 400-500</option><option value="biz">Business &ndash; 800-1,000</option><option value="custom">Custom</option></select><input id="fcfee" type="number" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc"><span>Τέλος επιτηδεύματος</span><span style="display:flex;gap:8px;align-items:center"><select id="fcpre" aria-label="Status"><option value="free">Freelancer &ndash; exempt</option><option value="block">Μπλοκάκι &ndash; 400-500</option><option value="biz">Business &ndash; 800-1,000</option><option value="custom">Custom</option></select><input id="fcfee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <label class="oc"><input type="checkbox" id="fcfirst"> First year of activity (no tax prepayment)</label>
   <div id="fcres"></div>
   <button type="button" class="pill" id="fcapply">Use as my tax set-aside %</button>
@@ -844,7 +866,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Add earning or expense</h2></div>
   <div class="chips"><button type="button" class="flchip on" data-fltype="in">Earning</button><button type="button" class="flchip" data-fltype="out">Expense</button></div>
   <form id="flf" class="of">
-    <input id="fla" type="number" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="fla" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="fld" type="date" required aria-label="Date">
     <div class="w vf" id="flvatw" hidden>
       <select id="flinc" aria-label="Is the amount before or after VAT?"><option value="0">Amount is before VAT</option><option value="1">Amount is after VAT</option></select>
@@ -869,10 +891,13 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="hp" role="dialog" aria-modal="true" aria-labelledby="pft">
   <div class="head"><h2 id="pft">Profile</h2><button type="button" class="ghost" id="pfx" aria-label="Close profile">✕</button></div>
   <h3>Budget</h3>
-  <label class="inc adv"><span>Monthly salary</span><span style="display:flex;gap:8px"><select id="pay" aria-label="Salary payments per year"><option value="12">× 12</option><option value="14">× 14</option><option value="14.5">× 14.5</option></select><input id="sal" type="number" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc adv"><span>Monthly salary</span><span style="display:flex;gap:8px"><select id="pay" aria-label="Salary payments per year"><option value="12">× 12</option><option value="14">× 14</option><option value="14.5">× 14.5</option></select><input id="sal" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <details id="xs" class="adv fcd" hidden><summary><h2>Extra salaries &mdash; paid into savings in the month they arrive</h2></summary><div id="xsl"></div></details>
-  <label class="inc"><span>Monthly budget</span><input id="inc" type="number" step="0.01" min="0" placeholder="0.00"></label>
+  <label class="inc"><span>Monthly budget</span><input id="inc" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></label>
   <details class="mbd adv" id="mbd"><summary>Budget per month</summary><div id="mbl"></div></details>
+  <h3>Reminders</h3>
+  <p class="hint" id="rmsum" data-notr></p>
+  <div class="data"><button type="button" id="rmo">See and edit reminders</button></div>
   <h3>Your data</h3>
   <div class="data">
     <button type="button" id="ex">Export backup</button>
@@ -880,8 +905,10 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <button type="button" id="mg">Merge backup</button>
     <input type="file" id="mgf" accept=".json,application/json" hidden>
     <input type="file" id="imf" accept=".json,application/json" hidden>
+    <button type="button" id="xl">Import from Excel</button>
+    <input type="file" id="xlf" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
   </div>
-  <p class="hint">Import replaces everything with the file. Merge adds only what is missing and keeps what you already have.</p>
+  <p class="hint">Import replaces everything with the file. Merge adds only what is missing and keeps what you already have. Import from Excel adds expenses from an Excel (.xlsx) or CSV file; you choose which column is which.</p>
   <div id="acw" class="acw" hidden style="margin-top:14px">
     <div class="ol" id="act"></div>
     <p class="hint" id="ach"></p>
@@ -894,6 +921,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="sr" id="sra" role="status" aria-live="polite"></div>
 <div class="dlgo lock boot" id="fmm"><div class="scb fmw" role="dialog" aria-modal="true" aria-labelledby="fmt"><div class="fmbr"><img src="app-icons/logo.webp" width="64" height="64" alt=""><div class="fmbn" data-notr><span>Cent</span>-aur</div><div class="fmbt">Every cent counts.</div></div><h3 id="fmt" data-notr></h3><p class="hint" id="fmi" data-notr></p><form id="fmf" autocomplete="on"><div class="scfm" id="fmb"></div><p class="scwn" id="fme" role="alert" hidden data-notr></p><div class="scfa" id="fma"></div></form><p class="ghl"><a href="https://github.com/BirdieG/cent-aur" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>Cent-aur on GitHub</span></a></p></div></div>
 <div class="dlgo" id="usrm" hidden><div class="scb usrw" role="dialog" aria-modal="true" aria-labelledby="usrt"><h3 id="usrt" data-notr></h3><p class="hint" id="usri" data-notr></p><div class="scfa" style="justify-content:flex-start;margin:0 0 6px" id="usrtop"></div><div class="usrl" id="usrl"></div><div class="scfa"><button type="button" class="ghost" id="usrx"></button></div></div></div>
+<div class="dlgo" id="rmm" hidden><div class="scb" role="dialog" aria-modal="true" aria-labelledby="rmt2"><h3 id="rmt2">Your reminders</h3><p class="hint">Reminders come up 3 days before the date. Each one belongs to an expense name, so one category can have several (for example “Electricity Home” and “Electricity Beach house”). When you add a bill with that name, its reminder moves on to its next date by itself.</p><div id="rml" data-notr></div><div class="scfa"><button type="button" class="primary" id="rmc">Close</button></div></div></div>
+<div class="dlgo" id="xlm" hidden><div class="scb xlw" role="dialog" aria-modal="true" aria-labelledby="xlt"><h3 id="xlt">Import from Excel</h3><p class="hint">Match the columns of your file. Only Date and Amount are needed.</p><div id="xlb"></div><div class="scfa"><button type="button" class="ghost" id="xlc">Cancel</button><button type="button" class="primary" id="xly">Import</button></div></div></div>
 <div class="dlgo" id="dlg" hidden><div class="dlgb" role="alertdialog" aria-modal="true" aria-labelledby="dlgm"><p id="dlgm"></p><div class="dlga"><button type="button" class="ghost" id="dlgc">Cancel</button><button type="button" class="primary" id="dlgy">OK</button></div></div></div>
 </main>
 <script src="app.js"></script>

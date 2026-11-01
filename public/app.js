@@ -43,18 +43,33 @@ function flReport(items,i){var r={earn:0,pend:0,vat:0,gross:0,exp:0,inn:0,client
     else{var n=flNet(o),g=flGross(o),ck=o.client||"",e=r.clients[ck]||(r.clients[ck]={n:0,net:0,vat:0,gross:0,pend:0});e.n++;e.net+=n;e.vat+=v;e.gross+=g;r.vat+=v;r.gross+=g;if(o.paid)r.earn+=n;else{r.pend+=n;e.pend+=n}}});
   r.profit=r.earn-r.exp;return r}
 function dueDateOf(day,i){var y=Math.floor(i/12),m=i%12,l=new Date(y,m+1,0).getDate();return y+"-"+pad(m+1)+"-"+pad(Math.min(day,l))}
-function remindersFor(cats,items,today,snooze,now){
-  var ti=idxOf(today),out=[];
-  cats.forEach(function(c){
-    if(!c.bill)return;
-    var every=c.every||1,mine=items.filter(function(it){return it.cat===c.name});
-    if(!mine.length)return;
-    var last=mine.reduce(function(a,b){return b.date>a.date?b:a}),li=idxOf(last.date),day=c.dueDay||+last.date.slice(8,10);
-    for(var i=li+every;i<=ti+1;i+=every){
-      if(i<ti-24)continue;
-      var key=c.name+"|"+ymOf(i);if(snooze&&snooze[key]>now)continue;
-      var due=dueDateOf(day,i),days=dnum(due)-dnum(today);
-      if(days<=3)out.push({cat:c,key:key,month:ymOf(i),due:due,days:days})}});
+// a reminder belongs to a bill the user chose to be reminded of: {id,cat,name,date: next due day,rep,day: day of the month it falls on}
+var REPS=[["once","One time","Μία φορά"],["d","Every day","Κάθε μέρα"],["w","Every week","Κάθε εβδομάδα"],["2w","Every 2 weeks","Κάθε 2 εβδομάδες"],["m","Every month","Κάθε μήνα"],["2m","Every 2 months","Κάθε 2 μήνες"],["3m","Every 3 months","Κάθε 3 μήνες"],["6m","Every 6 months","Κάθε 6 μήνες"],["y","Every year","Κάθε χρόνο"]],
+  REP_D={d:1,w:7,"2w":14},REP_M={m:1,"2m":2,"3m":3,"6m":6,y:12};
+function remNext(date,rep,day){if(REP_D[rep]){var d=new Date(dnum(date)*864e5+REP_D[rep]*864e5);return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())}
+  return dueDateOf(day||+date.slice(8,10),idxOf(date)+(REP_M[rep]||1))}
+// a reminder counts in a bill category, or anywhere when it was set for an amount that changes each time
+// (or for one future expense, r.item, in any category)
+function remOn(r,c){return !!(c&&(c.bill||r.v||r.item))}
+// a reminder with a last month (r.until, "YYYY-MM") stops after it
+function remOver(r,d){return !!(r.until&&(d||r.date).slice(0,7)>r.until)}
+// the repeating expense with this reminder's name that already counts its amount every time (null when there is none)
+function fixedOf(r){if(r.item)return find(r.item);var k=nrm(r.name),i=idxOf(r.date);for(var n=0;n<state.items.length;n++){var o=state.items[n];if(o.freq!==0&&o.cat===r.cat&&nrm(o.name)===k&&!(o.until&&i>idxOf(o.until)))return o}return null}
+// a bill's usual amount: the average of its last three one-time payments with that name (0 when it repeats on its own or has none)
+function remEst(r){var k=nrm(r.name),l=state.items.filter(function(o){return o.cat===r.cat&&nrm(o.name)===k}).sort(function(a,b){return a.date<b.date?1:-1});
+  if(!l.length||l[0].freq!==0||fixedOf(r))return 0;l=l.filter(function(o){return o.freq===0}).slice(0,3);return Math.round(l.reduce(function(t,o){return t+o.amt},0)/l.length*100)/100}
+// the bills reminders still expect in months a..b, by month: [{name,cat,date,amt}]
+function expBills(a,b){var out={};
+  state.rems.forEach(function(r){if(!remOn(r,catOf(r.cat))||remOver(r))return;var amt=remEst(r);if(!(amt>0))return;
+    for(var d=r.date,n=0;n<1200;n++){var i=idxOf(d);if(i>b)break;if(i>=a)(out[i]=out[i]||[]).push({name:r.name,cat:r.cat,date:d,amt:amt});if(r.rep==="once")break;d=remNext(d,r.rep,r.day);if(remOver(r,d))break}});
+  return out}
+function expSum(l){return (l||[]).reduce(function(t,e){return t+e.amt},0)}
+// paying up to this many days early still counts as paying this reminder
+function remWindow(rep){return Math.min(15,Math.floor((REP_D[rep]||(REP_M[rep]||1)*30)/2))}
+function remindersFor(rems,cats,today,snooze,now){var out=[];
+  (rems||[]).forEach(function(r){var c=null;for(var k=0;k<cats.length;k++)if(cats[k].name===r.cat)c=cats[k];if(!remOn(r,c)||remOver(r))return;
+    var key=r.id+"|"+r.date;if(snooze&&snooze[key]>now)return;
+    var days=dnum(r.date)-dnum(today);if(days<=3)out.push({cat:c,rem:r,key:key,month:r.date.slice(0,7),due:r.date,days:days})});
   out.sort(function(a,b){return a.days-b.days});return out}
 function savedMonths(firstIdx,ci,year){var a=Math.max(firstIdx,year*12),b=Math.min(ci-1,year*12+11),r=[];for(var i=a;i<=b;i++)r.push(i);return r}
 function prevBill(items,it){var best=null;items.forEach(function(o){if(o===it||o.cat!==it.cat)return;
@@ -108,7 +123,7 @@ function insightsFor(st,today){
   (st.cats||[]).forEach(function(c){if(!c.bill)return;
     var m=items.filter(function(it){return it.cat===c.name}).sort(function(a,b2){return a.date<b2.date?-1:a.date>b2.date?1:((a.created||"")<(b2.created||"")?-1:1)});
     if(m.length<2)return;var l=m[m.length-1],p=m[m.length-2];
-    if(idxOf(l.date)>=ci-3&&p.amt>0&&l.amt>p.amt*1.1&&l.amt-p.amt>=3)out.push({id:"bill",tone:"warn",w:(l.amt-p.amt)*12/(c.every||1),cat:c.name,pct:Math.round((l.amt/p.amt-1)*100),diff:l.amt-p.amt})});
+    if(idxOf(l.date)>=ci-3&&p.amt>0&&l.amt>p.amt*1.1&&l.amt-p.amt>=3)out.push({id:"bill",tone:"warn",w:(l.amt-p.amt)*12/billEvery(c.name),cat:c.name,pct:Math.round((l.amt/p.amt-1)*100),diff:l.amt-p.amt})});
   var base=+st.income||0;
   if(S.n>=2&&base>0&&S.avgTot>0&&S.avgTot<base*0.8&&base-S.avgTot>=20){var tgt=Math.ceil(S.avgTot*1.05/10)*10;if(tgt<base)out.push({id:"lowerbudget",tone:"tip",w:(base-tgt)*12,diff:base-S.avgTot,tgt:tgt,yearly:(base-tgt)*12})}
   var top=null;S.rows.forEach(function(r){if(!r.bill&&(!top||r.cur>top.cur))top=r});
@@ -265,9 +280,12 @@ function defaultCats(){var s=today().slice(0,7);return [
  {name:"Housing",icon:"house"},{name:"Κοινόχρηστα",icon:"building",bill:1},{name:"Mobile phone",icon:"phone",bill:1},{name:"Electricity",icon:"bolt",bill:1},
  {name:"Water",icon:"drop",bill:1},{name:"Internet",icon:"wifi",bill:1},{name:"Food",icon:"fork"},{name:"Supermarket",icon:"cart"},{name:"Transport",icon:"car"},
  {name:"Bills",icon:"receipt"},{name:"Bank",icon:"bank"},{name:"Subscriptions",icon:"screen"},{name:"Health",icon:"heart"},{name:"Leisure",icon:"spark"},{name:"Other",icon:"grid"}
- ].map(function(c){c.bill=!!c.bill;c.dueDay=null;c.every=1;c.since=s;c.group=["Water","Electricity","Internet"].indexOf(c.name)>=0?"Utilities":"";return c})}
+ ].map(function(c){c.bill=!!c.bill;c.since=s;c.group=["Water","Electricity","Internet"].indexOf(c.name)>=0?"Utilities":"";return c})}
 var FLC=["flov","flvat","flen","flcc","flrep","fltc","fladd"],DEF_FL={L:[],A:["flov","flvat","flen","flcc","flrep","fltc"],B:["fladd"]};
 var VIEWS=["insights","goals","trend","whatif","savings","extra","bills","bycat"];
+// cards hidden until ticked in View; state.show keeps only choices that differ from this
+var HIDEDEF=["goals","trend","whatif"];
+function shown(k){var v=(state.show||{})[k];return v===undefined?HIDEDEF.indexOf(k)<0:v}
 var DEF_LAYOUT={L:["savings","goals","extra"],M:["totals","add","expenses","bills","bycat","trend"],R:["side","insights","whatif"]},CARDS=["totals","savings","goals","extra","add","side","insights","expenses","bills","bycat","trend","whatif"];
 function normFl(l){var seen={},out={L:[],A:[],B:[]};
   if(l&&typeof l==="object")["L","A","B"].forEach(function(c){(Array.isArray(l[c])?l[c]:[]).forEach(function(id){if(FLC.indexOf(id)>=0&&!seen[id]){seen[id]=1;out[c].push(id)}})});
@@ -275,7 +293,7 @@ function normFl(l){var seen={},out={L:[],A:[],B:[]};
 function normLayout(l){var seen={},out={L:[],M:[],R:[]};
   if(l&&typeof l==="object")["L","M","R"].forEach(function(c){(Array.isArray(l[c])?l[c]:[]).forEach(function(id){if(CARDS.indexOf(id)>=0&&!seen[id]){seen[id]=1;out[c].push(id)}})});
   ["L","M","R"].forEach(function(c){DEF_LAYOUT[c].forEach(function(id){if(!seen[id]){seen[id]=1;out[c].push(id)}})});return out}
-var state={items:[],cur:"€",income:0,savings:0,salary:0,payments:12,budgets:{},xm:{xmas:11,easter:3,summer:7},half:"summer",oneoff:[],withdraw:[],layout:null,simple:false,tab:"personal",freelancer:false,fl:{items:[],tax:0,calc:{rev:"",exp:"",efka:250.77,age:"31",pre:"free",fee:0,first:false},vat:{on:false,period:"q",incl:false,rate:24,paid:{}},clients:[]},goals:[],cats:defaultCats(),snooze:{},mer:{},learn:{},theme:{pal:"green",mode:"auto"},minTray:false,lang:null,order:"new",collapsed:{fcd:true,xs:true},fullLists:false,trend:"line",show:{},flLayout:null,autoUpdate:true};
+var state={items:[],cur:"€",income:0,savings:0,salary:0,payments:12,budgets:{},xm:{xmas:11,easter:3,summer:7},half:"summer",oneoff:[],withdraw:[],layout:null,simple:false,tab:"personal",freelancer:false,fl:{items:[],tax:0,calc:{rev:"",exp:"",efka:250.77,age:"31",pre:"free",fee:0,first:false},vat:{on:false,period:"q",incl:false,rate:24,paid:{}},clients:[]},goals:[],cats:defaultCats(),snooze:{},rems:[],mer:{},learn:{},theme:{pal:"green",mode:"auto"},minTray:false,lang:null,order:"new",collapsed:{fcd:true,xs:true},fullLists:false,trend:"line",show:{},flLayout:null,autoUpdate:true};
 var STATE0=JSON.stringify(state);
 var L={0:"one-time",365:"daily",52:"weekly",26:"every 2 weeks",12:"monthly",4:"quarterly",1:"yearly"};
 var $=function(i){return document.getElementById(i)};
@@ -294,11 +312,14 @@ function normLearn(l){var out={},ks;if(!l||typeof l!=="object"||Array.isArray(l)
   ks.forEach(function(k){var v=l[k];if(k.length>=2&&k.length<=60&&v&&typeof v.c==="string"&&v.c.length<=40)out[k]={c:v.c}});return out}
 function normGoals(a){return (Array.isArray(a)?a:[]).filter(function(g){return g&&typeof g==="object"&&+g.target>0}).slice(0,200).map(function(g){return {id:g.id||nid(),name:String(g.name||"").trim().slice(0,60)||"Goal",target:+g.target,saved:(+g.saved>0?+g.saved:0),by:/^\d{4}-\d{2}$/.test(g.by||"")?g.by:""}})}
 function norm(d){var t=today(),y=t.slice(0,4);
-  var th=d.theme&&typeof d.theme==="object"?d.theme:{};d.theme={pal:PAL[th.pal]?th.pal:"green",mode:({auto:1,light:1,dark:1})[th.mode]?th.mode:"auto"};d.minTray=!!d.minTray;d.autoUpdate=d.autoUpdate!==false;d.flLayout=d.flLayout&&typeof d.flLayout==="object"?normFl(d.flLayout):null;d.trend=d.trend==="bar"?"bar":"line";var sh={};if(d.show&&typeof d.show==="object")VIEWS.forEach(function(k){if(d.show[k]===false)sh[k]=false});d.show=sh;d.lang=(d.lang==="el"||d.lang==="en")?d.lang:null;d.order=d.order==="old"?"old":"new";d.fullLists=!!d.fullLists;var cl=d.collapsed&&typeof d.collapsed==="object"?d.collapsed:{};d.collapsed={};["savings","extra","insights","goals"].forEach(function(k){if(cl[k]===true)d.collapsed[k]=true});d.collapsed.fcd=cl.fcd!==false;d.collapsed.xs=cl.xs!==false;d.goals=normGoals(d.goals);
+  var th=d.theme&&typeof d.theme==="object"?d.theme:{};d.theme={pal:PAL[th.pal]?th.pal:"green",mode:({auto:1,light:1,dark:1})[th.mode]?th.mode:"auto"};d.minTray=!!d.minTray;d.autoUpdate=d.autoUpdate!==false;d.flLayout=d.flLayout&&typeof d.flLayout==="object"?normFl(d.flLayout):null;d.trend=d.trend==="bar"?"bar":"line";var sh={};if(d.show&&typeof d.show==="object")VIEWS.forEach(function(k){var v=d.show[k],def=HIDEDEF.indexOf(k)<0;if(v===!def)sh[k]=v});d.show=sh;d.lang=(d.lang==="el"||d.lang==="en")?d.lang:null;d.order=d.order==="old"?"old":"new";d.fullLists=!!d.fullLists;var cl=d.collapsed&&typeof d.collapsed==="object"?d.collapsed:{};d.collapsed={};["savings","extra","insights","goals"].forEach(function(k){if(cl[k]===true)d.collapsed[k]=true});d.collapsed.fcd=cl.fcd!==false;d.collapsed.xs=cl.xs!==false;d.goals=normGoals(d.goals);
   if(!Array.isArray(d.cats)||!d.cats.length)d.cats=defaultCats();
   var hadGroup=d.cats.some(function(c){return "group" in c});
-  d.cats.forEach(function(c){if(!("group" in c))c.group=(!hadGroup&&["Water","Electricity","Internet"].indexOf(c.name)>=0)?"Utilities":"";c.group=typeof c.group==="string"?c.group.trim().slice(0,40):"";if(!ICONS[c.icon])c.icon="grid";c.bill=!!c.bill;c.dueDay=c.dueDay?+c.dueDay:null;c.every=+c.every||1;if(!c.since)c.since=t.slice(0,7)});
+  d.cats.forEach(function(c){if(!("group" in c))c.group=(!hadGroup&&["Water","Electricity","Internet"].indexOf(c.name)>=0)?"Utilities":"";c.group=typeof c.group==="string"?c.group.trim().slice(0,40):"";if(!ICONS[c.icon])c.icon="grid";c.bill=!!c.bill;delete c.dueDay;delete c.every;if(!c.since)c.since=t.slice(0,7)});
   if(!d.snooze||typeof d.snooze!=="object")d.snooze={};
+  d.rems=(Array.isArray(d.rems)?d.rems:[]).filter(function(r){return r&&typeof r.cat==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&REPS.some(function(p){return p[0]===r.rep})}).slice(0,300)
+    .map(function(r){var o={id:String(r.id||nid()),cat:r.cat.slice(0,40),name:String(r.name||r.cat).trim().slice(0,80)||r.cat,date:r.date,rep:r.rep};if(REP_M[r.rep])o.day=+r.day>=1&&+r.day<=31?+r.day:+r.date.slice(8,10);
+      if(r.v)o.v=1;if(/^\d{4}-\d{2}$/.test(r.until||""))o.until=r.until;if(typeof r.item==="string"&&r.item)o.item=r.item;return o});
   var bg=d.budgets&&typeof d.budgets==="object"&&!Array.isArray(d.budgets)?d.budgets:{};d.budgets={};
   Object.keys(bg).forEach(function(k){var v=bg[k];if(/^\d{4}-\d{2}$/.test(k)&&v!==""&&v!==null&&isFinite(+v)&&+v>=0)d.budgets[k]=+v});
   var xm=d.xm&&typeof d.xm==="object"?d.xm:{};d.xm={};
@@ -312,12 +333,11 @@ function norm(d){var t=today(),y=t.slice(0,4);
   d.fl.items.forEach(function(o){if(o.client&&d.fl.clients.map(function(c){return c.toLowerCase()}).indexOf(o.client.toLowerCase())<0)d.fl.clients.push(o.client)});
   d.withdraw=(Array.isArray(d.withdraw)?d.withdraw:[]).filter(function(o){return o&&/^\d{4}-\d{2}-\d{2}$/.test(o.date||"")&&+o.amt>0}).map(function(o){return {id:o.id||nid(),date:o.date,reason:String(o.reason||"").slice(0,60),amt:+o.amt}});
   d.oneoff=(Array.isArray(d.oneoff)?d.oneoff:[]).filter(function(o){return o&&/^\d{4}-\d{2}-\d{2}$/.test(o.date||"")&&+o.amt>0}).map(function(o){return {id:o.id||nid(),date:o.date,label:String(o.label||"").slice(0,60),amt:+o.amt,to:o.to==="budget"?"budget":"savings"}});
-  var bills={};d.cats.forEach(function(c){if(c.bill)bills[c.name]=1});
   d.mer=normMer(d.mer);d.learn=normLearn(d.learn);
   d.items=d.items.filter(function(it){return it&&typeof it==="object"});
   d.items.forEach(function(it){if(!it.id)it.id=nid();it.amt=+it.amt||0;it.freq=it.freq==null?12:+it.freq;if(L[it.freq]===undefined)it.freq=12;
     it.name=String(it.name==null?"":it.name);it.cat=String(it.cat==null||it.cat===""?"Other":it.cat);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(it.date||""))it.date=y+"-01-01";if(!it.created)it.created=t;if(bills[it.cat])it.freq=0;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(it.date||""))it.date=y+"-01-01";if(!it.created)it.created=t;
     var tg=parseTags(Array.isArray(it.tags)?it.tags.join(" "):it.tags);if(tg.length)it.tags=tg;else delete it.tags;
     if(typeof it.note==="string"&&it.note.trim())it.note=it.note.trim().slice(0,300);else delete it.note;
     if(!/^\d{4}-\d{2}$/.test(it.until||"")||it.freq===0)delete it.until;
@@ -404,9 +424,10 @@ function learnIt(name,cat){var k=nrm(name);if(k.length<2||k.length>60||k===nrm(c
 function groupIcon(e){var ns=state.cats.map(function(c){return c.name}).filter(function(n){return e.members[n]!==undefined});return ns.length>1?icGroup(ns):ic(e.icon)}
 var BELL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/></svg>';
 
-function curReminders(){return remindersFor(state.cats,LS().items,today(),state.snooze,Date.now())}
+function billEvery(cat){for(var k=0;k<state.rems.length;k++){var r=state.rems[k];if(r.cat===cat&&REP_M[r.rep])return REP_M[r.rep]}return 1}
+function curReminders(){return remindersFor(state.rems,state.cats,today(),state.snooze,Date.now())}
 function find(id){for(var i=0;i<state.items.length;i++)if(state.items[i].id===id)return state.items[i];return null}
-var LV=null,RF={},MS={},LAZY={},qStr="",qToks=[];
+var LV=null,RF={},MS={},LAZY={},EXPM={},qStr="",qToks=[];
 function liveState(){var f=function(k,l){return l.filter(function(o){return !isPend(k,o.id)})};return Object.assign({},state,{items:f("x",state.items),withdraw:f("w",state.withdraw),oneoff:f("e",state.oneoff)})}
 function LS(){return LV||state}
 function qLabel(it){var m=mOf(it.name);return (LANG==="el"?trCat(it.cat):"")+(m?" "+m.en+" "+m.el:"")}
@@ -453,7 +474,7 @@ function rowHTML(it,i){
   var tg=it.tags&&it.tags.length?'<span class="tgs">'+it.tags.map(function(t){return '<button type="button" class="tg" data-tg="'+esc(t)+'">#'+esc(t)+'</button>'}).join("")+'</span>':"";
   return '<div class="row"><div>'+icItem(it)+esc(it.name)+'<small>'+sub+'</small>'+tg+noteHTML(it)+billDelta(it)+'</div>'+
     '<div class="num">'+fmt(a)+'<small>/mo</small></div><div class="num yr">'+fmt(yearAmt(it,selYear))+'<small>/yr</small></div>'+
-    '<span class="act">'+(rec?'<button class="ed2" data-rp="pause" data-id="'+it.id+'" aria-label="Pause" title="Pause">'+PAUSEI+'</button>':'')+'<button class="ed" data-id="'+it.id+'" aria-label="Edit">✎</button><button class="del" data-id="'+it.id+'" aria-label="Delete">✕</button></span></div>'}
+    '<span class="act"><button type="button" class="more" data-more aria-expanded="false" aria-label="'+X("Actions for ","Ενέργειες για ")+esc(it.name)+'">'+MOREI+'</button>'+(rec?'<button class="ed2" data-rp="pause" data-id="'+it.id+'" aria-label="Pause" title="Pause">'+PAUSEI+'</button>':'')+'<button class="ed" data-id="'+it.id+'" aria-label="Edit">✎</button><button class="del" data-id="'+it.id+'" aria-label="Delete">✕</button></span></div>'}
 var NOTEI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8 9h8M8 13h5"/></svg>';
 function noteHTML(it){return it.note?'<button type="button" class="nt" data-nt aria-expanded="false">'+NOTEI+'<span>'+esc(it.note)+'</span></button>':""}
 function yearSums(y){var r={yb:0,plan:0,ex:0,ob:0};for(var m=0;m<12;m++){var i=y*12+m;r.yb+=budgetOf(LS(),i);r.ob+=oneSum(LS(),i,"budget");r.plan+=planSav(LS(),i);r.ex+=extraSav(LS(),i)}return r}
@@ -466,7 +487,7 @@ function renderXs(){var xp=xpays(state),p=+state.payments||12,s=+state.salary||0
     '<div class="hint">'+(p>=14.5?'14.5 salaries = 2 full + 1 half. Choose which payment is the half one; the other two are full.':'14 salaries = Christmas full, Easter and Summer half each.')+'</div>'}
 function renderMb(){var el=$("mbl");if(el.contains(document.activeElement))return;var h="";
   for(var m=0;m<12;m++){var i=selYear*12+m,k=ymOf(i),cu=state.budgets&&state.budgets[k]!=null,ex=extraSav(state,i),ob=oneSum(state,i,"budget");
-    h+='<div class="mbr"><span>'+MN(i)+'</span><input type="number" step="0.01" min="0" data-mb="'+k+'" value="'+(cu?(state.budgets[k]+ob).toFixed(2):'')+'" placeholder="'+((+state.income||0)+ob).toFixed(2)+'" aria-label="Budget for '+MN(i)+' '+selYear+'"><small>'+[ob?'incl. +'+fmt(ob)+' extra money':'',ex?'+'+fmt(ex)+' to savings':''].filter(Boolean).join(' · ')+'</small></div>'}
+    h+='<div class="mbr"><span>'+MN(i)+'</span><input type="number" inputmode="decimal" step="0.01" min="0" data-mb="'+k+'" value="'+(cu?(state.budgets[k]+ob).toFixed(2):'')+'" placeholder="'+((+state.income||0)+ob).toFixed(2)+'" aria-label="Budget for '+MN(i)+' '+selYear+'"><small>'+[ob?'incl. +'+fmt(ob)+' extra money':'',ex?'+'+fmt(ex)+' to savings':''].filter(Boolean).join(' · ')+'</small></div>'}
   el.innerHTML=h+'<div class="hint">Empty = your default monthly budget. Extra money added to a month’s budget is already included in the figure shown. Type a number to change only that month; clear the box to go back to the default.</div>'}
 var XICON='<span class="ib" style="--c:#e5484d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></span>';
 function periodHTML(l,pre,rowFn,sign,emptyCur,nm,sumFn,yr){nm=nm||"months";yr=yr==null?selYear:yr;var flat=pre==="w"||pre==="g";
@@ -487,14 +508,16 @@ function renderEo(){$("eolist").innerHTML=periodHTML(state.oneoff.filter(functio
 function monthDetails(i){
   var rows=rowsFor(i),k="m"+i,head;
   if(qToks.length){var sp0=0;rows.forEach(function(it){if(!isPend("x",it.id))sp0+=monthAmt(it,i)});head='<span class="num">'+rows.length+(rows.length===1?' entry':' entries')+' · '+fmt(sp0)+'</span>'}
-  else{var sp=sumM(i),b=budgetOf(LS(),i),left=b-sp,col=b>0?textColorFor(sp/b*100):"var(--muted)",av=+state.salary||0;
-    head='<span class="num" style="color:'+col+'">'+fmt(sp)+(b>0?' · '+(left>=0?fmt(left)+' left':fmt(-left)+' over'):'')+(oneSum(LS(),i,"budget")>0?' <span class="gd">+'+fmt(oneSum(LS(),i,"budget"))+' extra</span>':'')+(i<idxOf(today())&&av>0?'<span class="adv"> · saved '+fmt(realSav(LS(),i,sp))+'</span>':'')+'</span>'}
-  LAZY[k]=function(){return rows.map(function(it){return rowHTML(it,i)}).join("")};
+  else{var ex=i>idxOf(today())?expSum(EXPM[i]):0,sp=sumM(i),b=budgetOf(LS(),i),left=b-sp-ex,col=b>0?textColorFor((sp+ex)/b*100):"var(--muted)",av=+state.salary||0;
+    head='<span class="num" style="color:'+col+'">'+fmt(sp)+(ex?' <span class="est">+ ≈ '+fmt(ex)+'</span>':'')+(b>0?' · '+(left>=0?fmt(left)+' left':fmt(-left)+' over'):'')+(oneSum(LS(),i,"budget")>0?' <span class="gd">+'+fmt(oneSum(LS(),i,"budget"))+' extra</span>':'')+(i<idxOf(today())&&av>0?'<span class="adv"> · saved '+fmt(realSav(LS(),i,sp))+'</span>':'')+'</span>'}
+  var exl=!qToks.length&&i>idxOf(today())?EXPM[i]||[]:[];
+  LAZY[k]=function(){return rows.map(function(it){return rowHTML(it,i)}).join("")+exl.map(function(e){
+    return '<div class="row est"><div>'+ic(e.cat)+esc(e.name)+'<small>'+X("expected · ","αναμενόμενο · ")+dm(e.date)+X(" · estimate from your last payments"," · εκτίμηση από τις τελευταίες πληρωμές")+'</small></div><div class="num">≈ '+fmt(e.amt)+'</div><div class="num yr"></div><span class="act"></span></div>'}).join("")};
   return '<details data-k="'+k+'"'+(openD[k]?' open':'')+'><summary><span class="sum">'+MN(i)+' '+Math.floor(i/12)+'</span>'+head+'</summary><div class="scl" data-lz="'+k+'">'+(openD[k]?LAZY[k]():"")+'</div></details>'}
 function group(k,label,list){
   if(!list.length)return "";
   return '<details data-k="'+k+'"'+(openD[k]?' open':'')+'><summary><span class="sum">'+label+'</span><span class="num">'+list.length+(list.length===1?' month':' months')+'</span></summary>'+list.map(monthDetails).join("")+'</details>'}
-function months(a,b){var r=[];for(var i=a;i<=b;i++)if(rowsFor(i).length)r.push(i);return state.order==="old"?r:r.reverse()}
+function months(a,b){var r=[],ci=idxOf(today());for(var i=a;i<=b;i++)if(rowsFor(i).length||(i>ci&&!qToks.length&&EXPM[i]))r.push(i);return state.order==="old"?r:r.reverse()}
 
 function render(){
   var td=today(),ci=idxOf(td),cy=Math.floor(ci/12);lastDay=td;RF={};MS={};LAZY={};LV=liveState();
@@ -504,12 +527,12 @@ function render(){
   var yl=Object.keys(ys).map(Number).sort(function(a,b){return a-b});
   $("cur").value=state.cur;Array.prototype.forEach.call(document.querySelectorAll(".ordsel"),function(o){o.value=state.order});
   $("yrs").innerHTML=yl.map(function(y){return '<button type="button" class="chip'+(y===selYear?' on':'')+'" data-y="'+y+'">'+y+'</button>'}).join("");
-  var planned=0,cats={};
+  var planned=0,cats={};EXPM=expBills(selYear*12,selYear*12+11);var expY=0;Object.keys(EXPM).forEach(function(i){expY+=expSum(EXPM[i])});
   var mcat={};
   LS().items.forEach(function(it){var a=yearAmt(it,selYear);planned+=a;if(a>0){cats[it.cat]=(cats[it.cat]||0)+a;var mm=mOf(it.name);if(mm){var mc=mcat[it.cat]||(mcat[it.cat]={});var me=mc[mm.key]||(mc[mm.key]={amt:0,cat:it.cat});me.amt+=a}}});
   var Y=yearSums(selYear),inc=budgetOf(LS(),ci),pm=+state.payments||12,yb=Y.yb,cm=sumM(ci),avg=+state.salary||0,fi=minIdx(LS().items,ci);
   $("mlab").textContent="Spent in "+MN(ci);$("m").textContent=fmt(cm);
-  $("ylab").textContent="Planned for "+selYear;$("y").textContent=fmt(planned);
+  $("ylab").textContent="Planned for "+selYear;$("y").textContent=fmt(planned+expY);$("yest").hidden=!expY;$("yest").textContent=X("incl. ≈ "+fmt(expY)+" still expected","μαζί με ≈ "+fmt(expY)+" αναμενόμενα");
   $("ysl").textContent="Total yearly salary (salary × "+pm+")";$("ysal").textContent=fmt((+state.salary||0)*pm);
   $("yb").textContent=fmt(yb);$("ybl").textContent="Total yearly budget ("+selYear+")";$("ybx").textContent=Y.ob>0?"+"+fmt(Y.ob)+" from extra money":"";renderXs();renderMb();renderEo();renderWd();renderGains();renderFl();renderGoals();renderTrend();renderWhatIf();
   $("sv2").hidden=!(avg>0);$("shd").hidden=!(avg>0);$("sh").textContent=avg>0?(Y.plan<0?"Your budgets are higher than your salary plus extra money, so planned savings are negative.":""):"Set your monthly salary in Profile to see how much you are saving.";$("sh").hidden=!$("sh").textContent;
@@ -520,16 +543,16 @@ function render(){
     $("rsl").textContent="Real savings in "+selYear+(sm.length?" ("+sm.length+(sm.length===1?" completed month)":" completed months)"):"");
     $("rs").textContent=(sm.length||wdx)?fmt(real):"—";$("rs").style.color=real<0?"var(--danger)":"";
     $("rsd").textContent=sm.length?(diff>=0?"+"+fmt(diff)+" more than planned":fmt(-diff)+" less than planned"):"Real savings start counting once the first month is completed."}
-  if(yb>0){var pc=planned/yb*100,left=yb-planned,col=planColorFor(pc);
+  if(yb>0){var pc=(planned+expY)/yb*100,left=yb-planned-expY,col=planColorFor(pc);
     $("bb").style.width=Math.min(pc,100)+"%";$("bb").style.background=col;$("y").style.color=planTextFor(pc);$("bs").style.color=planTextFor(pc);
     $("bs").textContent=pc.toFixed(0)+"% of the yearly budget planned ("+selYear+") · "+(left>=0?fmt(left)+" not yet planned":fmt(-left)+" over budget");
   }else{$("bb").style.width="0";$("y").style.color="";$("bs").style.color="";$("bs").textContent="Set your monthly budget in Profile to see your budget status."}
 
-  var rs=curReminders();lastSig=rs.map(function(r){return r.key}).join(",");
+  var rs=curReminders();lastSig=rs.map(function(r){return r.key}).join(",");rmSummary();syncRem();
   var remH=rs.length?'<div class="rl">'+rs.map(function(r){
     var t=r.days<0?"overdue by "+(-r.days)+(r.days===-1?" day":" days"):r.days===0?"due today":"due in "+r.days+(r.days===1?" day":" days"),k=encodeURIComponent(r.key);
-    return '<div class="ri od"><div>'+ic(r.cat.name)+esc(r.cat.name)+'<small>'+t+' · '+dm(r.due)+' · '+MN(idxOf(r.month))+(lastOf(r.cat.name)?' · last bill '+fmt(lastOf(r.cat.name).amt):'')+'</small></div>'+
-      '<div class="ra"><button type="button" class="pill" data-add="'+k+'">Add expense</button><button type="button" class="pill" data-later="'+k+'">Remind me later</button></div>'+
+    return '<div class="ri od"><div>'+ic(r.cat.name)+esc(r.rem.name)+'<small>'+(r.rem.name!==r.cat.name?esc(r.cat.name)+' · ':'')+t+' · '+dm(r.due)+' · '+MN(idxOf(r.month))+(!r.rem.item&&lastPaid(r.rem)?' · last bill '+fmt(lastPaid(r.rem).amt):'')+'</small></div>'+
+      '<div class="ra">'+(fixedOf(r.rem)?'<span class="rqf">'+X("Already counted: ","Υπολογίζεται ήδη: ")+fmt(fixedOf(r.rem).amt)+' '+L[fixedOf(r.rem).freq]+'</span><button type="button" class="pill primary" data-rqp="'+k+'">'+X("Paid","Πληρώθηκε")+'</button>':'<label class="rq"><span>'+X("How much was it?","Πόσο ήταν;")+'</span><input type="number" inputmode="decimal" step="0.01" min="0.01" data-rqa="'+k+'" value="'+((remEst(r.rem)||(lastPaid(r.rem)||{}).amt||"")?(remEst(r.rem)||lastPaid(r.rem).amt).toFixed(2):"")+'" aria-label="'+X("Amount of ","Ποσό για ")+esc(r.rem.name)+'"></label><button type="button" class="pill primary" data-rqs="'+k+'">'+X("Paid","Πληρώθηκε")+'</button><button type="button" class="pill" data-add="'+k+'">'+X("More details","Περισσότερα")+'</button>')+'<button type="button" class="pill" data-later="'+k+'">Remind me later</button></div>'+
       (laterKey===r.key?'<div class="later"><span>Remind me again:</span><button type="button" data-sn="h1" data-k="'+k+'">In 1 hour</button><button type="button" data-sn="tm" data-k="'+k+'">Tomorrow morning</button><button type="button" data-sn="d3" data-k="'+k+'">In 3 days</button><button type="button" data-sn="w1" data-k="'+k+'">In a week</button><input type="datetime-local" id="snd" aria-label="Remind me at"><button type="button" data-snd="'+k+'">Set</button></div>':'')+'</div>'}).join("")+'</div>':"";
   var h="",g="";
   if(selYear===cy){
@@ -569,27 +592,54 @@ function applyData(d){
   buildMenu();renderCats();stopEdit();syncCat();applyTheme();syncOpts();applyLayout();applyFlLayout();syncFcalc();applyTab();applySimple();applyCollapse();applyFull();syncLang();$("fltax").value=state.fl.tax||"";stopFl();stopGoal();stopCl();syncEnd();applyView();render();return true}
 
 // everyday spending starts as one-time, everything else as monthly, until the user picks "How often" themselves
-function applyCatRules(){var c=$("cat").value,f=$("freq");if(isBill(c)){f.value="0";f.disabled=true}else{f.disabled=false;if(!freqTouched)f.value=ONCE_CATS.indexOf(c)>=0?"0":"12"}syncEnd()}
+function applyCatRules(){var c=$("cat").value,f=$("freq");f.disabled=false;if(!freqTouched)f.value=isBill(c)||ONCE_CATS.indexOf(c)>=0?"0":"12";syncEnd();syncRem()}
+// "Set a reminder" shows only while adding an expense in a bill category; a bill that already has one says so instead
+var remTouched=false;
+function remLabel(rep){for(var k=0;k<REPS.length;k++)if(REPS[k][0]===rep)return X(REPS[k][1],REPS[k][2]);return rep}
+// a one-time expense dated in the future can get a one-time reminder of its own, in any category
+function futureOnce(){return +$("freq").value===0&&($("dt").value||"")>today()}
+function syncRem(){var c=$("cat").value,fu=futureOnce(),show=(isBill(c)||fu)&&!editing&&!varies(),ex=show&&!fu?remsOf($("name").value||c):[];
+  $("rmw").hidden=!show;if(!show)return;$("rmw").classList.toggle("fu",fu);if(fu)$("rmr").value="once";$("rmd").previousElementSibling.textContent=fu?X("Remind me on","Υπενθύμιση στις"):X("Next reminder","Επόμενη υπενθύμιση");
+  if(ex.length){$("rmt").hidden=true;$("rmf").hidden=true;$("rmi").hidden=false;$("rmi").textContent=X("Reminder set: ","Υπενθύμιση: ")+remLabel(ex[0].rep).toLowerCase()+X(" · next "," · επόμενη ")+dmy(ex[0].date);return}
+  $("rmi").hidden=true;$("rmt").hidden=!$("rmf").hidden;
+  if(!remTouched){var d=$("dt").value||today(),r=$("rmr").value;$("rmd").value=r==="once"?d:remNext(d,r)}
+  if(fu&&$("rmd").value>d)$("rmd").value=$("dt").value}
+function remOpen(on){$("rmf").hidden=!on;remTouched=false;if(!on)$("rmr").value="m";syncRem()}
+// "The amount changes each time": the expense is saved as this one payment, plus a reminder that repeats as How often says
+var FREQ_REP={365:"d",52:"w",26:"2w",12:"m",4:"3m",1:"y"};
+function varies(){return !$("vyw").hidden&&$("vy").checked}
+function remForm(){if(varies()){var vr=FREQ_REP[$("freq").value],vd=$("dt").value||today(),vu=$("endm").value,vf={rep:vr,date:remNext(vd,vr,REP_M[vr]?+vd.slice(8,10):0),v:1};if(/^\d{4}-\d{2}$/.test(vu))vf.until=vu;return vf}
+  if($("rmw").hidden||$("rmf").hidden)return null;var d=$("rmd").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return null;return futureOnce()?{rep:"once",date:d,item:1}:{rep:$("rmr").value,date:d}}
+$("rmt").addEventListener("click",function(){remOpen(true);$("rmr").focus()});
+$("rmx").addEventListener("click",function(){remOpen(false);$("rmt").focus()});
+$("rmr").addEventListener("change",function(){if(!remTouched)syncRem()});
+$("rmd").addEventListener("input",function(){remTouched=true});
+$("dt").addEventListener("change",syncRem);
+$("name").addEventListener("input",syncRem);
 function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span aria-hidden="true">▾</span>';$("ddb").setAttribute("aria-label","Category: "+v);applyCatRules();updateLP()}
-function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";showNote("");$("endm").value="";$("dt").value=today();applyCatRules();updateLP()}
+function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";showNote("");$("endm").value="";$("vy").checked=false;$("dt").value=today();remOpen(false);applyCatRules();updateLP()}
 function startEdit(id){var it=find(id);if(!it)return;editing=id;freqTouched=true;
   $("cat").value=it.cat;syncCat();
   $("name").value=it.name;delete $("name").dataset.auto;$("amt").value=it.amt;if(!$("freq").disabled)$("freq").value=it.freq;$("dt").value=it.date;$("tags").value=(it.tags||[]).join(", ");showNote(it.note||"");$("endm").value=it.until||"";syncEnd();
-  $("sb").textContent="Save";$("cc").hidden=false;$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
+  remOpen(false);$("sb").textContent="Save";$("cc").hidden=false;$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
 // the note box stays closed until "+ Add note" is pressed or the expense already has a note
 function showNote(v,open){$("note").value=v;$("note").hidden=!(v||open);$("nlk").hidden=!!(v||open)}
 $("nlk").addEventListener("click",function(){showNote($("note").value,true);$("note").focus()});
 function prefillBill(r){stopEdit();$("cat").value=r.cat.name;syncCat();
-  var mine=state.items.filter(function(e){return e.cat===r.cat.name});
+  var mine=state.items.filter(function(e){return e.cat===r.cat.name}),same=mine.filter(function(e){return nrm(e.name)===nrm(r.rem.name)});if(same.length)mine=same;
   if(mine.length){var l=mine.reduce(function(a,b){return b.date>a.date?b:a});$("amt").value=l.amt}
-  $("name").value=r.cat.name;$("dt").value=r.due;$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
+  $("name").value=r.rem.name;$("dt").value=r.due;syncRem();$("f").scrollIntoView({behavior:"smooth",block:"center"});$("amt").focus();updateLP()}
 $("f").addEventListener("submit",function(e){
   e.preventDefault();
   var a=parseFloat($("amt").value);if(!(a>0)){alert("Enter an amount greater than 0.");return}
-  var o={name:$("name").value.trim()||$("cat").value,amt:a,freq:isBill($("cat").value)?0:+$("freq").value,cat:$("cat").value,date:$("dt").value||today()};
+  var o={name:$("name").value.trim()||$("cat").value,amt:a,freq:+$("freq").value,cat:$("cat").value,date:$("dt").value||today()};
+  var vy=varies()&&!editing;if(vy)o.freq=0;
   var tg=parseTags($("tags").value),en=$("endm").value,nt=$("note").value.trim().slice(0,300);if(nt)o.note=nt;
-  if(o.freq!==0&&/^\d{4}-\d{2}$/.test(en)){if(idxOf(en)<idxOf(o.date)){alert("The end month can’t be before the start date.");return}o.until=en}
-  var pvX=null;if(editing){var it=find(editing);if(it){pvX=clone(it);Object.assign(it,o);learnIt(o.name,o.cat);mClear();if(!o.until)delete it.until;if(!nt)delete it.note;if(tg.length)it.tags=tg;else delete it.tags}}
+  if((o.freq!==0||vy)&&/^\d{4}-\d{2}$/.test(en)){if(idxOf(en)<idxOf(o.date)){alert("The end month can’t be before the start date.");return}if(!vy)o.until=en}
+  var rf=remForm();if(!$("rmw").hidden&&!$("rmf").hidden&&!editing){if(!rf){alert(X("Choose the date of the next reminder.","Επιλέξτε την ημερομηνία της επόμενης υπενθύμισης."));return}
+    if(rf.item&&rf.date>o.date){alert(X("The reminder can’t be after the expense’s date.","Η υπενθύμιση δεν μπορεί να είναι μετά την ημερομηνία του εξόδου."));return}
+    if(!rf.item&&rf.date<o.date){alert(X("The reminder can’t be before the bill’s date.","Η υπενθύμιση δεν μπορεί να είναι πριν από την ημερομηνία του λογαριασμού."));return}}
+  var pvX=null;if(editing){var it=find(editing);if(it){pvX=clone(it);if(o.date!==it.date)state.rems.forEach(function(r){if(r.item===it.id&&r.date>o.date)r.date=o.date});Object.assign(it,o);learnIt(o.name,o.cat);mClear();if(!o.until)delete it.until;if(!nt)delete it.note;if(tg.length)it.tags=tg;else delete it.tags}}
   else{var dp=dupOf(o);
     if(dp){ask("This looks like a duplicate of “"+dp.name+"” ("+fmt(dp.amt)+", "+dmy(dp.date)+"). Add it anyway?",function(){commitNew(o,tg)},{ok:"Add anyway"});return}
     commitNew(o,tg);return}
@@ -598,13 +648,30 @@ $("f").addEventListener("submit",function(e){
 function dupOf(o){var its=LS().items,nm=o.name.toLowerCase();
   for(var k=0;k<its.length;k++){var it=its[k];if(it.cat!==o.cat||it.name.toLowerCase()!==nm||Math.abs(it.amt-o.amt)>=.005)continue;
     if(o.freq===0?(it.freq===0&&idxOf(it.date)===idxOf(o.date)):it.freq===o.freq)return it}return null}
-function commitNew(o,tg){learnIt(o.name,o.cat);o.id=nid();o.created=today();if(tg.length)o.tags=tg;state.items.push(o);stopEdit();$("amt").focus();save();render();
+// a reminder belongs to the bill's name, so one category can hold several (Electricity Home, Electricity Beach house…)
+// (a reminder for one future expense, r.item, belongs to that expense instead)
+function remsOf(name){var k=nrm(name);return k?state.rems.filter(function(r){return !r.item&&nrm(r.name)===k}):[]}
+// the last payment of the bill a reminder is for, else of its category
+function lastPaid(r){var k=nrm(r.name),b=null;state.items.forEach(function(o){if(o.cat===r.cat&&nrm(o.name)===k&&(!b||o.date>b.date))b=o});return b||lastOf(r.cat)}
+// a bill was paid on o.date: each reminder it settles moves to its next date (a one-time reminder is done)
+function remPaid(o){var hit=false;
+  remsOf(o.name).forEach(function(r){if(r.cat!==o.cat||!remOn(r,catOf(r.cat)))return;var lim=dnum(o.date)+remWindow(r.rep);if(dnum(r.date)>lim)return;hit=true;
+    if(r.rep==="once"){r.done=1;return}
+    for(var n=0;n<1000&&dnum(r.date)<=lim;n++)r.date=remNext(r.date,r.rep,r.day);if(remOver(r))r.done=1});
+  if(hit)state.rems=state.rems.filter(function(r){return !r.done});return hit}
+// quick: added straight from a reminder, so the Add form (and whatever is typed in it) is left alone
+function commitNew(o,tg,quick){learnIt(o.name,o.cat);o.id=nid();o.created=today();if(tg.length)o.tags=tg;
+  var remPrev=clone(state.rems),rf=quick?null:remForm();remPaid(o);
+  var mine=rf&&rf.v?remsOf(o.name).filter(function(r){return r.cat===o.cat}):[];
+  if(mine.length)mine.forEach(function(r){r.v=1;r.rep=rf.rep;if(rf.until)r.until=rf.until;else delete r.until});
+  else if(rf){var nr={id:nid(),cat:o.cat,name:o.name,date:rf.date,rep:rf.rep};if(REP_M[rf.rep])nr.day=+rf.date.slice(8,10);if(rf.v)nr.v=1;if(rf.until)nr.until=rf.until;if(rf.item)nr.item=o.id;state.rems.push(nr)}
+  state.items.push(o);if(!quick){stopEdit();$("amt").focus()}save();render();
   // confirm every new expense, with an Undo that takes exactly this one back out
   var fo=o.freq?$("freq").querySelector('option[value="'+o.freq+'"]'):null,id=o.id,
-    nm=o.name===o.cat?cn(o.name):o.name,rest=" · "+fmt(o.amt)+" · "+cn(o.cat)+(fo?" · "+fo.textContent.toLowerCase():"");
+    nm=o.name===o.cat?cn(o.name):o.name,rest=" · "+fmt(o.amt)+" · "+cn(o.cat)+(fo?" · "+fo.textContent.toLowerCase():"")+(rf&&rf.v?" · "+remLabel(rf.rep).toLowerCase()+X(", amount varies",", μεταβλητό ποσό"):"")+(rf&&rf.item?X(" · reminder on "," · υπενθύμιση ")+dm(rf.date):"");
   editToast(X("Added “"+nm+"”"+rest,"Προστέθηκε «"+nm+"»"+rest),null,null,function(){
     var k="x:"+id;if(pend[k]){clearTimeout(pend[k]);delete pend[k]}
-    state.items=state.items.filter(function(i){return i.id!==id});if(editing===id)stopEdit();
+    state.items=state.items.filter(function(i){return i.id!==id});state.rems=remPrev;if(editing===id)stopEdit();
     save();render();$("amt").focus();announce(X("Expense removed","Το έξοδο αφαιρέθηκε"))})}
 $("cc").addEventListener("click",stopEdit);
 $("amt").addEventListener("input",updateLP);
@@ -617,11 +684,21 @@ document.addEventListener("click",function(e){
   var t=e.target,x;
   if(x=t.closest("[data-bf]")){billFilter=decodeURIComponent(x.dataset.bf);render();return}
   if(x=t.closest("[data-add]")){var rr=curReminders().filter(function(r){return r.key===decodeURIComponent(x.dataset.add)})[0];if(rr)prefillBill(rr);return}
+  if(x=t.closest("[data-rqs]")){var qk=decodeURIComponent(x.dataset.rqs),qr=curReminders().filter(function(r){return r.key===qk})[0],qi=document.querySelector('[data-rqa="'+x.dataset.rqs+'"]'),qa=qi?parseFloat(qi.value):NaN;
+    if(!qr)return;if(!(qa>0)){alert(X("Enter an amount greater than 0.","Εισαγάγετε ποσό μεγαλύτερο από 0."));if(qi)qi.focus();return}
+    commitNew({name:qr.rem.name,amt:Math.round(qa*100)/100,freq:0,cat:qr.cat.name,date:qr.due},[],true);return}
+  if(x=t.closest("[data-rqp]")){var pr=curReminders().filter(function(r){return r.key===decodeURIComponent(x.dataset.rqp)})[0];if(!pr)return;
+    var rp0=clone(state.rems);if(pr.rem.item)state.rems=state.rems.filter(function(r){return r!==pr.rem});else remPaid({name:pr.rem.name,cat:pr.cat.name,date:pr.due});save();render();
+    editToast(X("Marked as paid: ","Σημειώθηκε ως πληρωμένο: ")+pr.rem.name,null,null,function(){state.rems=rp0;save();render()});return}
   if(x=t.closest("[data-later]")){var lk=decodeURIComponent(x.dataset.later);laterKey=laterKey===lk?null:lk;render();return}
   if(x=t.closest("[data-sn]")){snoozeFor(decodeURIComponent(x.dataset.k),x.dataset.sn);return}
   if(x=t.closest("[data-snd]")){var v=$("snd").value,ms=v?new Date(v).getTime():NaN;if(isNaN(ms)||ms<=Date.now()){alert("Pick a date and time in the future.");return}setSnooze(decodeURIComponent(x.dataset.snd),ms);return}
   if(x=t.closest("[data-ce]")){$("cmp").hidden=false;openCat(+x.dataset.ce);return}
   if(x=t.closest("[data-cd]")){delCat(+x.dataset.cd);return}
+  // phones: ⋯ shows a row's pause, edit and delete; one row at a time
+  if(x=t.closest("[data-more]")){var rw=x.closest(".row"),on=!rw.classList.contains("open");
+    Array.prototype.forEach.call(document.querySelectorAll(".row.open"),function(r){r.classList.remove("open");r.querySelector("[data-more]").setAttribute("aria-expanded","false")});
+    rw.classList.toggle("open",on);x.setAttribute("aria-expanded",String(on));return}
   if(x=t.closest(".ed")){startEdit(x.dataset.id);return}
   if(x=t.closest("[data-undo]")){undoDel(x.dataset.undo);return}
   if(x=t.closest(".del")){var d=find(x.dataset.id);if(!d)return;askDel("x",d.id,d.name,d.freq!==0);return}
@@ -632,6 +709,10 @@ $("inc").addEventListener("input",function(){state.income=parseFloat(this.value)
 $("sal").addEventListener("input",function(){state.salary=parseFloat(this.value)||0;save();render()});
 $("pay").addEventListener("change",function(){state.payments=+this.value;save();render()});
 $("cur").addEventListener("change",function(){state.cur=this.value;save();render()});
+// phones: Clear all sits under the list, away from sort and currency; back in the header on wider screens
+(function(){var c=$("clear"),hd=c.parentNode,mq=window.matchMedia&&matchMedia("(max-width:620px)");if(!mq)return;
+  function place(){if(mq.matches)$("sec2").parentNode.appendChild(c);else hd.appendChild(c)}
+  place();if(mq.addEventListener)mq.addEventListener("change",place);else if(mq.addListener)mq.addListener(place)})();
 $("clear").addEventListener("click",function(){if(state.items.length)ask((state.items.length===1?X("Delete your only expense?","Να διαγραφεί το μοναδικό σας έξοδο;"):
   X("Delete all "+state.items.length+" expenses, from every month and year?","Να διαγραφούν και τα "+state.items.length+" έξοδα, από όλους τους μήνες και τα έτη;"))+" "+
   X("Your budget, savings and categories stay.","Ο προϋπολογισμός, οι αποταμιεύσεις και οι κατηγορίες μένουν."),function(){
@@ -666,36 +747,34 @@ function snoozeFor(key,code){var d=new Date(),ms;
 var ci=null,selIcon="grid";
 function buildIcons(){$("ip").innerHTML=Object.keys(ICONS).map(function(id){return '<button type="button" class="icb" data-ic="'+id+'" aria-label="'+id+'">'+icTile(id)+'</button>'}).join("")}
 function markIcon(){var b=$("ip").querySelectorAll(".icb");for(var i=0;i<b.length;i++)b[i].classList.toggle("on",b[i].dataset.ic===selIcon)}
-function openCat(i){ci=i;var c=i>=0?state.cats[i]:{name:"",icon:"grid",bill:false,dueDay:null,every:1};
-  $("cn").value=c.name;$("cg").value=c.group||"";selIcon=c.icon;$("cb").checked=c.bill;$("cd").value=c.dueDay||"";$("ce").value=String(c.every||1);$("cbo").hidden=!c.bill;markIcon();$("cf").hidden=false;$("cn").focus()}
+function openCat(i){ci=i;var c=i>=0?state.cats[i]:{name:"",icon:"grid",bill:false};
+  $("cn").value=c.name;$("cg").value=c.group||"";selIcon=c.icon;$("cb").checked=c.bill;markIcon();$("cf").hidden=false;$("cn").focus()}
 function renderCats(){$("cl").innerHTML=state.cats.map(function(c,i){
-  return '<div class="crow"><div>'+ic(c.name)+esc(c.name)+'<small>'+(c.bill?'Bill · due '+(c.dueDay?'day '+c.dueDay:'day of your last payment')+' · every '+(c.every>1?c.every+' months':'month'):'Expense category')+(c.group?' · Group: '+esc(c.group):'')+'</small></div>'+
+  return '<div class="crow"><div>'+ic(c.name)+esc(c.name)+'<small>'+(c.bill?'Bill':'Expense category')+(c.group?' · Group: '+esc(c.group):'')+'</small></div>'+
   '<span class="act"><button class="ed" data-ce="'+i+'" aria-label="Edit category">✎</button><button class="del" data-cd="'+i+'" aria-label="Delete category">✕</button></span></div>'}).join("")}
 function saveCat(force){
   var n=$("cn").value.trim();if(!n){alert("Give the category a name.");return}
   for(var j=0;j<state.cats.length;j++)if(j!==ci&&state.cats[j].name.toLowerCase()===n.toLowerCase()){alert("A category with that name already exists.");return}
-  var dd=parseInt($("cd").value,10);if(!(dd>=1&&dd<=31))dd=null;
   var old=ci>=0?state.cats[ci]:null,bill=$("cb").checked;
-  if(bill&&state.items.some(function(it){return it.cat===(old?old.name:n)&&it.freq!==0})&&force!==true){ask("Bills are one-time payments, so recurring expenses in this category will become one-time. Continue?",function(){saveCat(true)});return}
-  var cfg={name:n,icon:selIcon,group:$("cg").value.trim().slice(0,40),bill:bill,dueDay:dd,every:+$("ce").value||1,since:old&&old.bill===bill?old.since:today().slice(0,7)};
-  if(old&&old.name!==n){state.items.forEach(function(it){if(it.cat===old.name)it.cat=n});if($("cat").value===old.name)$("cat").value=n}
+  var cfg={name:n,icon:selIcon,group:$("cg").value.trim().slice(0,40),bill:bill,since:old&&old.bill===bill?old.since:today().slice(0,7)};
+  if(old&&old.name!==n){state.items.forEach(function(it){if(it.cat===old.name)it.cat=n});state.rems.forEach(function(r){if(r.cat===old.name){if(r.name===old.name)r.name=n;r.cat=n}});if($("cat").value===old.name)$("cat").value=n}
   if(old)state.cats[ci]=cfg;else state.cats.push(cfg);
-  if(bill)state.items.forEach(function(it){if(it.cat===n)it.freq=0});
   $("cf").hidden=true;ci=null;buildMenu();renderCats();syncCat();save();render()}
 function delCat(i){var c=state.cats[i];if(!c)return;
   if(c.name==="Other"){alert("The Other category can’t be deleted.");return}
   var n=state.items.filter(function(it){return it.cat===c.name}).length;
-  ask("Delete the category \""+c.name+"\"?"+(n?" Its "+n+" expense"+(n===1?"":"s")+" will move to Other.":""),function(){doDelCat(c)},{ok:"Delete"})}
+  var nr=state.rems.filter(function(r){return r.cat===c.name}).length;
+  ask("Delete the category \""+c.name+"\"?"+(n?" Its "+n+" expense"+(n===1?"":"s")+" will move to Other.":"")+(nr?X(" Its reminders will be deleted."," Οι υπενθυμίσεις της θα διαγραφούν."):""),function(){doDelCat(c)},{ok:"Delete"})}
 function doDelCat(c){
-  if(!catOf("Other"))state.cats.push({name:"Other",icon:"grid",bill:false,dueDay:null,every:1,since:today().slice(0,7)});
+  if(!catOf("Other"))state.cats.push({name:"Other",icon:"grid",bill:false,since:today().slice(0,7)});
   state.items.forEach(function(it){if(it.cat===c.name)it.cat="Other"});
+  state.rems=state.rems.filter(function(r){return r.cat!==c.name});
   state.cats.splice(state.cats.indexOf(c),1);
   if($("cat").value===c.name)$("cat").value="Other";
   buildMenu();renderCats();syncCat();save();render()}
 // one button opens the category list (✎ edits, ✕ deletes) with the form for a new category below it, and closes it again
 $("cadd").addEventListener("click",function(){if(!$("cmp").hidden){$("cmp").hidden=true;$("cf").hidden=true;ci=null}else{$("cmp").hidden=false;openCat(-1)}});
 $("ip").addEventListener("click",function(e){var b=e.target.closest(".icb");if(!b)return;selIcon=b.dataset.ic;markIcon()});
-$("cb").addEventListener("change",function(){$("cbo").hidden=!this.checked});
 $("cx").addEventListener("click",function(){$("cf").hidden=true;ci=null});
 $("cs").addEventListener("click",function(){saveCat()});
 
@@ -758,13 +837,13 @@ $("pfov").addEventListener("click",function(e){if(e.target===this)profileOpen(fa
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("pfov").hidden&&!document.querySelector(".dlgo:not([hidden])"))profileOpen(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("hov").hidden)helpOpen(false)});
 $("optx").addEventListener("click",function(){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")});
-// open Settings moves down only the card columns it would cover, so nothing sits under it
-function optPush(){var o=$("opt"),cs=document.querySelectorAll("#cols>.col,#flcols>.col");
+// an open Settings or View panel moves down only the card columns it would cover, so nothing sits under it
+function optPush(){var o=$("opt").hidden?$("viewp"):$("opt"),cs=document.querySelectorAll("#cols>.col,#flcols>.col");
   cs.forEach(function(c){c.style.marginTop=""});if(o.hidden)return;
   var r=o.getBoundingClientRect();
   cs.forEach(function(c){if(!c.offsetParent)return;var b=c.getBoundingClientRect();if(b.height&&b.left<r.right&&b.right>r.left&&b.top<r.bottom+40)c.style.marginTop=Math.ceil(r.bottom+40-b.top)+"px"})}
-new MutationObserver(optPush).observe($("opt"),{attributes:true,attributeFilter:["hidden"]});
-if(window.ResizeObserver)new ResizeObserver(function(){if(!$("opt").hidden)optPush()}).observe($("opt"));
+["opt","viewp"].forEach(function(id){new MutationObserver(optPush).observe($(id),{attributes:true,attributeFilter:["hidden"]});
+  if(window.ResizeObserver)new ResizeObserver(function(){if(!$(id).hidden)optPush()}).observe($(id))});
 window.addEventListener("resize",optPush);
 document.addEventListener("click",function(e){if(!$("opt").hidden&&!e.target.closest("#opt")&&!e.target.closest("#gear")){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("opt").hidden){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}});
@@ -1038,8 +1117,8 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "Category name (e.g. Mobile phone 2)":"Όνομα κατηγορίας (π.χ. Κινητό 2)",
 "Group (optional): categories with the same group are combined in By category":"Ομάδα (προαιρετικό): κατηγορίες με την ίδια ομάδα συγχωνεύονται στο «Ανά κατηγορία»",
 "This is a bill (remind me when the next payment is due)":"Αυτός είναι λογαριασμός (υπενθύμιση όταν λήξει η επόμενη πληρωμή)",
-"Due day of the month":"Ημέρα λήξης του μήνα","auto":"αυτόματα","Repeats every":"Επαναλαμβάνεται κάθε","month":"μήνα","year":"έτος","Save category":"Αποθήκευση κατηγορίας",
-"Calculator":"Αριθμομηχανή","Close all":"Κλείσιμο όλων","Export backup":"Εξαγωγή αντιγράφου","Import backup":"Εισαγωγή αντιγράφου","Merge backup":"Συγχώνευση αντιγράφου","Update":"Ενημέρωση","Backup saved":"Το αντίγραφο αποθηκεύτηκε","View":"Προβολή","Choose which cards to show":"Επιλέξτε ποιες κάρτες θα εμφανίζονται","Choose what you want to see. Hidden cards are removed from the screen; your data is kept.":"Επιλέξτε τι θέλετε να βλέπετε. Οι κρυμμένες κάρτες αφαιρούνται από την οθόνη· τα δεδομένα σας διατηρούνται.","What if I cut back?":"Κι αν περικόψω;","Close view":"Κλείσιμο προβολής","Add anyway":"Προσθήκη ούτως ή άλλως","Spending by month":"Έξοδα ανά μήνα","Nothing new to merge":"Δεν υπάρχει κάτι νέο για συγχώνευση",
+"Set a reminder":"Ορισμός υπενθύμισης","The amount changes each time":"Το ποσό αλλάζει κάθε φορά","Repeats":"Επανάληψη","Next reminder":"Επόμενη υπενθύμιση","No reminder":"Χωρίς υπενθύμιση","Reminders":"Υπενθυμίσεις","See and edit reminders":"Προβολή και αλλαγή υπενθυμίσεων","Your reminders":"Οι υπενθυμίσεις σας","Close":"Κλείσιμο","Reminders come up 3 days before the date. Each one belongs to an expense name, so one category can have several (for example “Electricity Home” and “Electricity Beach house”). When you add a bill with that name, its reminder moves on to its next date by itself.":"Οι υπενθυμίσεις εμφανίζονται 3 ημέρες πριν από την ημερομηνία. Η καθεμία ανήκει σε ένα όνομα εξόδου, οπότε μια κατηγορία μπορεί να έχει πολλές (για παράδειγμα «Ρεύμα σπίτι» και «Ρεύμα εξοχικό»). Όταν προσθέτετε λογαριασμό με αυτό το όνομα, η υπενθύμισή του μεταφέρεται μόνη της στην επόμενη ημερομηνία.","This is a bill (lets you set a reminder when you add one)":"Αυτός είναι λογαριασμός (μπορείτε να ορίσετε υπενθύμιση όταν τον προσθέτετε)","Due day of the month":"Ημέρα λήξης του μήνα","auto":"αυτόματα","Repeats every":"Επαναλαμβάνεται κάθε","month":"μήνα","year":"έτος","Save category":"Αποθήκευση κατηγορίας",
+"Calculator":"Αριθμομηχανή","Close all":"Κλείσιμο όλων","Export backup":"Εξαγωγή αντιγράφου","Import backup":"Εισαγωγή αντιγράφου","Import from Excel":"Εισαγωγή από Excel","Import":"Εισαγωγή","Match the columns of your file. Only Date and Amount are needed.":"Αντιστοιχίστε τις στήλες του αρχείου σας. Χρειάζονται μόνο η Ημερομηνία και το Ποσό.","Import replaces everything with the file. Merge adds only what is missing and keeps what you already have. Import from Excel adds expenses from an Excel (.xlsx) or CSV file; you choose which column is which.":"Η εισαγωγή αντικαθιστά τα πάντα με το αρχείο. Η συγχώνευση προσθέτει μόνο ό,τι λείπει και κρατά ό,τι ήδη έχετε. Η εισαγωγή από Excel προσθέτει έξοδα από αρχείο Excel (.xlsx) ή CSV· εσείς επιλέγετε ποια στήλη είναι ποια.","Merge backup":"Συγχώνευση αντιγράφου","Update":"Ενημέρωση","Backup saved":"Το αντίγραφο αποθηκεύτηκε","Sections":"Ενότητες","Choose which cards to show":"Επιλέξτε ποιες κάρτες θα εμφανίζονται","Choose what you want to see. Hidden cards are removed from the screen; your data is kept.":"Επιλέξτε τι θέλετε να βλέπετε. Οι κρυμμένες κάρτες αφαιρούνται από την οθόνη· τα δεδομένα σας διατηρούνται.","What if I cut back?":"Κι αν περικόψω;","Close sections":"Κλείσιμο ενοτήτων","Add anyway":"Προσθήκη ούτως ή άλλως","Spending by month":"Έξοδα ανά μήνα","Nothing new to merge":"Δεν υπάρχει κάτι νέο για συγχώνευση",
 "All bills":"Όλοι οι λογαριασμοί",
 "No bills yet. Add an expense in a bill category (Electricity, Κοινόχρηστα, Water…) and its history appears here.":"Δεν υπάρχουν λογαριασμοί ακόμη. Προσθέστε ένα έξοδο σε κατηγορία λογαριασμών (Ρεύμα, Κοινόχρηστα, Νερό…) και το ιστορικό του θα εμφανιστεί εδώ.",
 "Previous months":"Προηγούμενοι μήνες","Upcoming months":"Επόμενοι μήνες","Previous withdrawals":"Προηγούμενες αναλήψεις","Upcoming withdrawals":"Μελλοντικές αναλήψεις","Previous savings money":"Προηγούμενα ποσά αποταμίευσης","Upcoming savings money":"Μελλοντικά ποσά αποταμίευσης",
@@ -1056,12 +1135,12 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "14.5 salaries = 2 full + 1 half. Choose which payment is the half one; the other two are full.":"14,5 μισθοί = 2 ολόκληροι + 1 μισός. Επιλέξτε ποια πληρωμή είναι ο μισός· οι άλλες δύο είναι ολόκληρες.",
 "Make this the half":"Κάνε αυτόν τον μισό","Full salary":"Ολόκληρος μισθός","Half salary":"Μισός μισθός",
 "Christmas":"Χριστούγεννα","Easter":"Πάσχα","Summer":"Καλοκαίρι","Christmas month":"Μήνας Χριστουγέννων","Easter month":"Μήνας Πάσχα","Summer month":"Μήνας καλοκαιριού",
-"Remind me later":"Υπενθύμιση αργότερα","Remind me again:":"Υπενθύμιση ξανά:","In 1 hour":"Σε 1 ώρα","Tomorrow morning":"Αύριο το πρωί","In 3 days":"Σε 3 ημέρες","In a week":"Σε μία εβδομάδα","Remind me at":"Υπενθύμιση στις","Set":"Ορισμός",
+"Remind me later":"Υπενθύμιση αργότερα","More details":"Περισσότερα","Paid":"Πληρώθηκε","How much was it?":"Πόσο ήταν;","Remind me again:":"Υπενθύμιση ξανά:","In 1 hour":"Σε 1 ώρα","Tomorrow morning":"Αύριο το πρωί","In 3 days":"Σε 3 ημέρες","In a week":"Σε μία εβδομάδα","Remind me at":"Υπενθύμιση στις","Set":"Ορισμός",
 "Pick a date and time in the future.":"Επιλέξτε ημερομηνία και ώρα στο μέλλον.",
 "taken from savings":"αφαιρέθηκε από τις αποταμιεύσεις","added to savings":"προστέθηκε στις αποταμιεύσεις","added to budget":"προστέθηκε στον προϋπολογισμό",
 "Delete":"Διαγραφή","Edit category":"Επεξεργασία κατηγορίας","Delete category":"Διαγραφή κατηγορίας","Expense category":"Κατηγορία εξόδων","Category":"Κατηγορία","Status":"Κατάσταση",
 "Give the category a name.":"Δώστε ένα όνομα στην κατηγορία.","A category with that name already exists.":"Υπάρχει ήδη κατηγορία με αυτό το όνομα.",
-"Bills are one-time payments, so recurring expenses in this category will become one-time. Continue?":"Οι λογαριασμοί είναι εφάπαξ πληρωμές, επομένως τα επαναλαμβανόμενα έξοδα αυτής της κατηγορίας θα γίνουν εφάπαξ. Συνέχεια;",
+
 "The Other category can’t be deleted.":"Η κατηγορία «Άλλο» δεν μπορεί να διαγραφεί.","Remove all expenses?":"Να αφαιρεθούν όλα τα έξοδα;",
 "That file isn’t a Cent-aur backup.":"Αυτό το αρχείο δεν είναι αντίγραφο ασφαλείας του Cent-aur.",
 "Saved":"Αποθηκεύτηκε",
@@ -1087,7 +1166,7 @@ var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλ�
 "Effective tax rate":"Πραγματικός φορολογικός συντελεστής","Tax prepayment next year (55%)":"Προκαταβολή φόρου επόμενου έτους (55%)","none in the first year":"καμία το πρώτο έτος",
 "Suggested set-aside (tax + fee) of profit":"Προτεινόμενη παρακράτηση (φόρος + τέλος) από το κέρδος","Use as my tax set-aside %":"Χρήση ως το ποσοστό παρακράτησης φόρου",
 "Estimate only, not tax advice. It uses the scale for the year selected above (2026 scale from tax year 2026, otherwise the 2025 scale), no tax credit for freelancers, and ΕΦΚΑ deducted from taxable income. It does not include child reductions, minimum presumed income, VAT or other fees. The τέλος επιτηδεύματος is reported as abolished for freelancers from 2025, 400-500 € for μπλοκάκι and 800-1,000 € for businesses in 2026 (planned abolition 2027) — check with your accountant or AADE.":"Μόνο εκτίμηση, όχι φορολογική συμβουλή. Χρησιμοποιεί την κλίμακα του έτους που έχει επιλεγεί παραπάνω (κλίμακα 2026 από το φορολογικό έτος 2026, αλλιώς κλίμακα 2025), χωρίς φορολογική έκπτωση για ελεύθερους επαγγελματίες και με αφαίρεση των εισφορών ΕΦΚΑ από το φορολογητέο εισόδημα. Δεν περιλαμβάνει μειώσεις για τέκνα, τεκμαρτό εισόδημα, ΦΠΑ ή άλλα τέλη. Το τέλος επιτηδεύματος αναφέρεται ως καταργημένο για ελεύθερους επαγγελματίες από το 2025, 400-500 € για μπλοκάκι και 800-1.000 € για επιχειρήσεις το 2026 (προγραμματισμένη κατάργηση το 2027) — ελέγξτε με τον λογιστή σας ή την ΑΑΔΕ.",
-"The date decides which month an expense belongs to. Bills (mobile phone, electricity, water, internet, Κοινόχρηστα and any category you mark as a bill) are one-time payments: add one each time you pay. A bill is reminded only after its first payment is added: if the next one is not paid one month after the last payment date, Cent-aur reminds you.":"Η ημερομηνία καθορίζει σε ποιον μήνα ανήκει ένα έξοδο. Οι λογαριασμοί (κινητό, ρεύμα, νερό, διαδίκτυο, Κοινόχρηστα και κάθε κατηγορία που ορίζετε ως λογαριασμό) είναι εφάπαξ πληρωμές: προσθέστε μία κάθε φορά που πληρώνετε. Ένας λογαριασμός υπενθυμίζεται μόνο αφού προστεθεί η πρώτη του πληρωμή: αν η επόμενη δεν πληρωθεί έναν μήνα μετά την ημερομηνία της τελευταίας πληρωμής, το Cent-aur σας το υπενθυμίζει.",
+"The date decides which month an expense belongs to. Bills (mobile phone, electricity, water, internet, Κοινόχρηστα and any category you mark as a bill) start as one-time payments, so you add one each time you pay and can compare them; choose another How often if a bill is always the same amount. When you add a bill you can choose Set a reminder: how often it repeats and when it is next due. Paying the bill moves the reminder on to its next date. If something repeats but its amount changes (like electricity), tick The amount changes each time: you add each payment when it comes, and the months ahead show an estimate. A one-time expense dated in the future can have a reminder of its own too.":"Η ημερομηνία καθορίζει σε ποιον μήνα ανήκει ένα έξοδο. Οι λογαριασμοί (κινητό, ρεύμα, νερό, διαδίκτυο, Κοινόχρηστα και κάθε κατηγορία που ορίζετε ως λογαριασμό) ξεκινούν ως εφάπαξ πληρωμές, ώστε να προσθέτετε μία κάθε φορά που πληρώνετε και να τις συγκρίνετε· επιλέξτε άλλο «Πόσο συχνά» αν ένας λογαριασμός έχει πάντα το ίδιο ποσό. Όταν προσθέτετε λογαριασμό μπορείτε να επιλέξετε Ορισμός υπενθύμισης: πόσο συχνά επαναλαμβάνεται και πότε λήγει ξανά. Η πληρωμή του λογαριασμού μεταφέρει την υπενθύμιση στην επόμενη ημερομηνία. Αν κάτι επαναλαμβάνεται αλλά το ποσό του αλλάζει (όπως το ρεύμα), επιλέξτε «Το ποσό αλλάζει κάθε φορά»: προσθέτετε κάθε πληρωμή όταν έρθει, και οι επόμενοι μήνες δείχνουν μια εκτίμηση. Ένα εφάπαξ έξοδο με μελλοντική ημερομηνία μπορεί επίσης να έχει δική του υπενθύμιση.",
 "Track what you spend, see what is left of your budget, and never miss a bill. Quick start:":"Καταγράψτε τα έξοδά σας, δείτε τι απομένει από τον προϋπολογισμό σας και μην ξεχνάτε ποτέ έναν λογαριασμό. Γρήγορη εκκίνηση:",
 "airplane":"αεροπλάνο","bank":"τράπεζα","bolt":"κεραυνός","book":"βιβλίο","building":"κτίριο","car":"αυτοκίνητο","cart":"καλάθι","cup":"φλιτζάνι","drop":"σταγόνα","dumbbell":"αλτήρας","flame":"φλόγα","fork":"πιρούνι","fuel":"καύσιμα","gift":"δώρο","grid":"πλέγμα","heart":"καρδιά","house":"σπίτι","paw":"πατούσα","percent":"ποσοστό","phone":"τηλέφωνο","pill":"χάπι","plane":"αεροπλάνο","receipt":"απόδειξη","screen":"οθόνη","shield":"ασπίδα","ship":"πλοίο","shirt":"πουκάμισο","spark":"σπίθα","wifi":"wifi","wrench":"κλειδί",
 "Add client":"Προσθήκη πελάτη","Add goal":"Προσθήκη στόχου","Amount is after VAT":"Το ποσό είναι μετά το ΦΠΑ","Amount is before VAT":"Το ποσό είναι πριν το ΦΠΑ",
@@ -1438,7 +1517,7 @@ function askDel(k,id,name,rec){
   var msg=name?(rec?'Delete "'+name+'"? It will be removed from all months.':'Delete "'+name+'"?'):"Delete this entry?";
   ask(msg,function(){pend[k+":"+id]=setTimeout(function(){commitDel(k,id)},5000);render()},{ok:"Delete"})}
 function commitDel(k,id){var key=k+":"+id;clearTimeout(pend[key]);delete pend[key];
-  if(k==="x"){state.items=state.items.filter(function(i){return i.id!==id});if(editing===id)stopEdit()}
+  if(k==="x"){state.items=state.items.filter(function(i){return i.id!==id});state.rems=state.rems.filter(function(r){return r.item!==id});if(editing===id)stopEdit()}
   else if(k==="w"){state.withdraw=state.withdraw.filter(function(x){return x.id!==id});if(editWD===id)stopWD()}
   else if(k==="e"){state.oneoff=state.oneoff.filter(function(x){return x.id!==id});if(editEO===id)stopEO()}
   else if(k==="g"){state.goals=state.goals.filter(function(x){return x.id!==id});if(goalEdit===id)stopGoal()}
@@ -1480,6 +1559,7 @@ $("inscopy").addEventListener("click",function(){var t=insSummary(),b=this,old=b
   try{navigator.clipboard.writeText(t).then(done,function(){fb()})}catch(e){fb()}
   function fb(){var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(e){}a.remove();done()}});
 /* ===== v51: tags & search, pause/end, goals, VAT, clients, report, start with Windows ===== */
+var MOREI='<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
 var PAUSEI='<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
 var MAB_EN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],MAB_EL=["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
 function MNY(s){var i=idxOf(s);return (LANG==="el"?EL_M[i%12]:MN(i))+" "+Math.floor(i/12)}
@@ -1510,8 +1590,9 @@ function renderSearch(){
   else qs.hidden=true}
 
 /* ---- recurring expenses: pause / resume / end ---- */
-function syncEnd(){$("endw").hidden=(+$("freq").value===0)}
-$("freq").addEventListener("change",function(){freqTouched=true;syncEnd()});
+function syncEnd(){var f=+$("freq").value;$("vyw").hidden=f===0||!!editing;$("endw").hidden=f===0}
+$("freq").addEventListener("change",function(){freqTouched=true;syncEnd();syncRem()});
+$("vy").addEventListener("change",function(){syncEnd();syncRem()});
 function renderRec(){
   var ci=idxOf(today()),all=LS().items.filter(function(it){return it.freq!==0}),np=0;
   all.forEach(function(it){if(recStatus(it,ci)==="paused")np++});
@@ -1552,7 +1633,7 @@ function renderGoals(){
     return '<div class="gl'+(gi.done?' done':'')+'"><div class="glh"><div><b>'+esc(g.name)+'</b><small>'+fmt(g.saved)+' / '+fmt(g.target)+' · '+Math.round(gi.pct)+'%</small></div>'+
       '<span class="act"><button class="ed2" data-gedit="'+g.id+'" aria-label="Edit">✎</button><button class="del" data-gdel="'+g.id+'" aria-label="Delete">✕</button></span></div>'+
       '<div class="bb"><i style="width:'+gi.pct+'%"></i></div>'+
-      '<div class="gls"><small>'+line+'</small><span class="gla"><input type="number" step="0.01" min="0.01" data-ga="'+g.id+'" placeholder="'+X("Amount","Ποσό")+'" aria-label="'+X("Amount","Ποσό")+'"><button type="button" class="pill" data-gadd="'+g.id+'">'+X("Add","Προσθήκη")+'</button><button type="button" class="pill" data-gsub="'+g.id+'">'+X("Take out","Ανάληψη")+'</button></span></div></div>'}).join("")}
+      '<div class="gls"><small>'+line+'</small><span class="gla"><input type="number" inputmode="decimal" step="0.01" min="0.01" data-ga="'+g.id+'" placeholder="'+X("Amount","Ποσό")+'" aria-label="'+X("Amount","Ποσό")+'"><button type="button" class="pill" data-gadd="'+g.id+'">'+X("Add","Προσθήκη")+'</button><button type="button" class="pill" data-gsub="'+g.id+'">'+X("Take out","Ανάληψη")+'</button></span></div></div>'}).join("")}
 $("gf").addEventListener("submit",function(e){e.preventDefault();
   var nm=$("gn").value.trim().slice(0,60),t=parseFloat($("gt").value),sv=parseFloat($("gs").value);if(!(sv>0))sv=0;
   if(!nm||!(t>0)){alert(X("Enter a goal name and a target above 0.","Δώστε όνομα στόχου και ποσό-στόχο μεγαλύτερο από 0."));return}
@@ -1789,6 +1870,10 @@ $("mrs").addEventListener("click",function(e){var box=this;
   if(e.target.id==="mrapply"){var n=0;Array.prototype.forEach.call(box.querySelectorAll("[data-si]"),function(c){if(!c.checked)return;var r=box._rows[+c.getAttribute("data-si")];if(r&&catOf(r.cat)){r.it.cat=r.cat;n++}});
     box.hidden=true;if(n){save();render();say("Moved "+n+(n===1?" expense":" expenses"))}}});
 
+/* ---- number boxes: browsers let "e" (1e5), "+" and "-" through; amounts here are never written that way ---- */
+function numBad(el,txt){return el&&el.tagName==="INPUT"&&el.type==="number"&&(/[eE+]/.test(txt)||(txt.indexOf("-")>=0&&!(+el.min<0)))}
+document.addEventListener("keydown",function(e){if(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&numBad(e.target,e.key))e.preventDefault()},true);
+document.addEventListener("paste",function(e){var t=e.clipboardData&&e.clipboardData.getData("text");if(t&&numBad(e.target,t))e.preventDefault()},true);
 /* ---- clicks added in v51 (tags, recurring buttons) ---- */
 document.addEventListener("click",function(e){var t=e.target,x;
   if(x=t.closest("[data-tg]")){toggleTag(x.getAttribute("data-tg"));return}
@@ -1827,6 +1912,186 @@ $("mgf").addEventListener("change",function(){
     var tot=r.items+r.extra+r.goals+r.fl;
     if(tot){save();applyData(state);setTimeout(function(){say("Merged "+r.items+(r.items===1?" expense, ":" expenses, ")+(r.extra+r.goals+r.fl)+((r.extra+r.goals+r.fl)===1?" other entry":" other entries"))},400)}
     else say("Nothing new to merge")})});
+
+/* ---- Profile → Reminders ---- */
+var rmEdit=null;
+function rmSummary(){var n=state.rems.length,nx=state.rems.slice().sort(function(a,b){return a.date<b.date?-1:1})[0];
+  $("rmsum").textContent=n?n+(n===1?X(" reminder"," υπενθύμιση"):X(" reminders"," υπενθυμίσεις"))+X(" · next: "," · επόμενη: ")+nx.name+", "+dmy(nx.date):X("No reminders yet. When you add a bill, choose Set a reminder.","Δεν υπάρχουν υπενθυμίσεις ακόμη. Όταν προσθέτετε λογαριασμό, επιλέξτε Ορισμός υπενθύμισης.")}
+function renderRems(){var l=state.rems.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
+  $("rml").innerHTML=l.length?l.map(function(r){var c=catOf(r.cat),off=!remOn(r,c);
+    if(rmEdit===r.id)return '<div class="rmr ed1"><div>'+ic(r.cat)+esc(r.name)+'</div><div class="rme"><label><span>'+X("Expense name","Όνομα εξόδου")+'</span><input data-rmname maxlength="80" value="'+esc(r.name).replace(/"/g,"&quot;")+'"></label>'+(r.item?'':'<label><span>'+X("Repeats","Επανάληψη")+'</span><select data-rmrep>'+REPS.map(function(p){return '<option value="'+p[0]+'"'+(p[0]===r.rep?' selected':'')+'>'+X(p[1],p[2])+'</option>'}).join("")+'</select></label>')+
+      '<label><span>'+X("Next reminder","Επόμενη υπενθύμιση")+'</span><input type="date" data-rmdate value="'+r.date+'"></label>'+(r.item?'':'<label><span>'+X("Ends after (optional)","Λήγει μετά (προαιρετικό)")+'</span><input type="month" data-rmuntil value="'+(r.until||"")+'"></label>')+'</div><div class="scfa"><button type="button" class="ghost" data-rmc>'+X("Cancel","Άκυρο")+'</button><button type="button" class="primary" data-rms="'+r.id+'">'+X("Save","Αποθήκευση")+'</button></div></div>';
+    return '<div class="rmr"><div>'+ic(r.cat)+esc(r.name)+'<small>'+(r.name!==r.cat?esc(cn(r.cat))+' · ':'')+(r.item?X("for the expense on ","για το έξοδο της ")+(find(r.item)?dmy(find(r.item).date):"?"):remLabel(r.rep))+(r.v?X(" · amount varies"," · μεταβλητό ποσό"):"")+(r.until?X(" · until "," · έως ")+MNY(r.until):"")+' · '+X("next ","επόμενη ")+dmy(r.date)+(off?' · <span class="neg">'+X("not shown: the category is no longer a bill","δεν εμφανίζεται: η κατηγορία δεν είναι πια λογαριασμός")+'</span>':'')+'</small></div>'+
+      '<span class="act"><button class="ed2" data-rme="'+r.id+'" aria-label="'+X("Edit","Επεξεργασία")+'">✎</button><button class="del" data-rmd="'+r.id+'" aria-label="'+X("Delete","Διαγραφή")+'">✕</button></span></div>'}).join(""):
+    '<div class="empty">'+X("No reminders yet. When you add an expense in a bill category, choose Set a reminder.","Δεν υπάρχουν υπενθυμίσεις ακόμη. Όταν προσθέτετε έξοδο σε κατηγορία λογαριασμού, επιλέξτε Ορισμός υπενθύμισης.")+'</div>'}
+function remById(id){for(var k=0;k<state.rems.length;k++)if(state.rems[k].id===id)return state.rems[k];return null}
+$("rmo").addEventListener("click",function(){rmEdit=null;renderRems();$("rmm").hidden=false;$("rmc").focus()});
+function rmClose(){$("rmm").hidden=true;rmEdit=null;$("rmo").focus()}
+$("rmc").addEventListener("click",rmClose);
+$("rmm").addEventListener("click",function(e){var t=e.target,x;if(t===this){rmClose();return}
+  if(x=t.closest("[data-rme]")){rmEdit=x.getAttribute("data-rme");renderRems();var s=$("rml").querySelector("[data-rmrep]");if(s)s.focus();return}
+  if(t.closest("[data-rmc]")){rmEdit=null;renderRems();return}
+  if(x=t.closest("[data-rms]")){var r=remById(x.getAttribute("data-rms")),box=x.closest(".rmr"),d=box.querySelector("[data-rmdate]").value;if(!r)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){alert(X("Choose the date of the next reminder.","Επιλέξτε την ημερομηνία της επόμενης υπενθύμισης."));return}
+    var nm=box.querySelector("[data-rmname]").value.trim().slice(0,80);if(!nm){alert(X("Give the reminder the name of the expense it is for.","Δώστε στην υπενθύμιση το όνομα του εξόδου που αφορά."));return}
+    if(!r.item&&remsOf(nm).some(function(o){return o!==r})){alert(X("Another reminder already has that name.","Μια άλλη υπενθύμιση έχει ήδη αυτό το όνομα."));return}
+    var ru=box.querySelector("[data-rmuntil]"),uv=ru?ru.value:"",fx=r.item?find(r.item):null;
+    if(uv&&uv<d.slice(0,7)){alert(X("The last month can’t be before the next reminder.","Ο τελευταίος μήνας δεν μπορεί να είναι πριν από την επόμενη υπενθύμιση."));return}
+    if(fx&&d>fx.date){alert(X("The reminder can’t be after the expense’s date.","Η υπενθύμιση δεν μπορεί να είναι μετά την ημερομηνία του εξόδου."));return}
+    if(/^\d{4}-\d{2}$/.test(uv))r.until=uv;else delete r.until;
+    r.name=nm;if(!r.item)r.rep=box.querySelector("[data-rmrep]").value;r.date=d;if(REP_M[r.rep])r.day=+d.slice(8,10);else delete r.day;rmEdit=null;save();render();renderRems();return}
+  if(x=t.closest("[data-rmd]")){var rd=remById(x.getAttribute("data-rmd"));if(!rd)return;
+    ask(rd.v?X("“"+rd.name+"” changes amount each time, so its estimates come from this reminder. Deleting it also removes the ≈ estimates in the months ahead. The payments you have added stay.","Το «"+rd.name+"» αλλάζει ποσό κάθε φορά, οπότε οι εκτιμήσεις του προέρχονται από αυτή την υπενθύμιση. Αν τη διαγράψετε, φεύγουν και οι εκτιμήσεις ≈ των επόμενων μηνών. Οι πληρωμές που έχετε προσθέσει μένουν."):
+      X("Delete the reminder for “"+rd.name+"”? Your expenses stay as they are.","Διαγραφή της υπενθύμισης για «"+rd.name+"»; Τα έξοδά σας μένουν ως έχουν."),function(){state.rems=state.rems.filter(function(r){return r!==rd});save();render();renderRems()},{ok:X("Delete","Διαγραφή")})}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("rmm").hidden&&$("dlg").hidden)rmClose()});
+
+/* ---- import expenses from an Excel (.xlsx) or CSV file: read in the browser, columns chosen by the user ---- */
+// .xlsx is a zip of XML files: the browser's own DecompressionStream unpacks it, so no library is needed
+function xlUnzip(buf){var u=new Uint8Array(buf),dv=new DataView(buf),e=-1,out={};
+  for(var p=u.length-22;p>=Math.max(0,u.length-65558);p--)if(dv.getUint32(p,true)===0x06054b50){e=p;break}
+  if(e<0)return Promise.reject(new Error("zip"));
+  var n=dv.getUint16(e+10,true),o=dv.getUint32(e+16,true),jobs=[];
+  for(var k=0;k<n&&dv.getUint32(o,true)===0x02014b50;k++){
+    var meth=dv.getUint16(o+10,true),cs=dv.getUint32(o+20,true),nl=dv.getUint16(o+28,true),xl=dv.getUint16(o+30,true),cl=dv.getUint16(o+32,true),lo=dv.getUint32(o+42,true);
+    var name=new TextDecoder().decode(u.subarray(o+46,o+46+nl));o+=46+nl+xl+cl;
+    if(!/\.(xml|rels)$/.test(name))continue;
+    var st=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),raw=u.subarray(st,st+cs);
+    jobs.push((function(name,raw,meth){return (meth===0?Promise.resolve(raw):new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())
+      .then(function(b){out[name]=new TextDecoder().decode(b)})})(name,raw,meth))}
+  return Promise.all(jobs).then(function(){return out})}
+function xlXml(s){return new DOMParser().parseFromString(s||"<x/>","application/xml")}
+function xlAll(d,tag){return Array.prototype.slice.call(d.getElementsByTagNameNS("*",tag))}
+function xlText(el){return xlAll(el,"t").map(function(t){return t.textContent}).join("")}
+// Excel keeps dates as day numbers; only the cell's number format says it is a date
+function xlDateFmts(styles){var d=xlXml(styles),custom={},isD=[];
+  xlAll(d,"numFmt").forEach(function(f){custom[f.getAttribute("numFmtId")]=/[dmy]/i.test((f.getAttribute("formatCode")||"").replace(/"[^"]*"|\[[^\]]*\]|\\./g,""))});
+  var xfs=d.getElementsByTagNameNS("*","cellXfs")[0];
+  if(xfs)xlAll(xfs,"xf").forEach(function(x){var id=+x.getAttribute("numFmtId");isD.push((id>=14&&id<=22)||(id>=45&&id<=47)||!!custom[id])});
+  return isD}
+function xlSerial(v){var d=new Date(Math.round((v-25569)*864e5));return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())}
+function xlColIdx(ref){var m=/^[A-Z]+/.exec(ref||""),n=0;if(!m)return -1;for(var i=0;i<m[0].length;i++)n=n*26+m[0].charCodeAt(i)-64;return n-1}
+function xlReadXlsx(buf){return xlUnzip(buf).then(function(f){
+  var ss=xlAll(xlXml(f["xl/sharedStrings.xml"]),"si").map(xlText),isD=xlDateFmts(f["xl/styles.xml"]),
+    wb=xlXml(f["xl/workbook.xml"]),rels={};
+  xlAll(xlXml(f["xl/_rels/workbook.xml.rels"]),"Relationship").forEach(function(r){var t=r.getAttribute("Target");rels[r.getAttribute("Id")]=t.charAt(0)==="/"?t.slice(1):"xl/"+t});
+  return xlAll(wb,"sheet").map(function(s,k){
+    var path=rels[s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id")]||"xl/worksheets/sheet"+(k+1)+".xml",rows=[];
+    xlAll(xlXml(f[path]),"row").forEach(function(r){var row=[];
+      xlAll(r,"c").forEach(function(c,ci){var t=c.getAttribute("t"),v=c.getElementsByTagNameNS("*","v")[0],x=v?v.textContent:"",i=xlColIdx(c.getAttribute("r"));if(i<0)i=ci;
+        row[i]=t==="s"?ss[+x]:t==="inlineStr"?xlText(c):t==="str"||t==="e"?x:t==="b"?x==="1"?"TRUE":"FALSE":x===""?"":isD[+c.getAttribute("s")||0]?{d:xlSerial(+x)}:+x});
+      var ri=+r.getAttribute("r")-1;rows[ri>=0?ri:rows.length]=row});
+    return {name:s.getAttribute("name")||"Sheet "+(k+1),rows:xlTidy(rows)}}).filter(function(s){return s.rows.length})})}
+function xlReadCsv(buf){var u=new Uint8Array(buf),t=new TextDecoder("utf-8").decode(u);
+  if(t.indexOf("�")>=0)try{t=new TextDecoder("windows-1253").decode(u)}catch(e){}   // older Greek Excel saves CSV in this encoding
+  t=t.replace(/^﻿/,"");var l1=t.split(/\r?\n/)[0],sep=[";","\t",","].reduce(function(b,c){return l1.split(c).length>l1.split(b).length?c:b},",");
+  var rows=[],row=[],cell="",q=false;
+  for(var i=0;i<t.length;i++){var ch=t.charAt(i);
+    if(q){if(ch==='"'){if(t.charAt(i+1)==='"'){cell+='"';i++}else q=false}else cell+=ch}
+    else if(ch==='"')q=true;else if(ch===sep){row.push(cell);cell=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t.charAt(i+1)==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}else cell+=ch}
+  if(cell||row.length){row.push(cell);rows.push(row)}
+  return [{name:"CSV",rows:xlTidy(rows)}]}
+// fill gaps with "", trim text, drop empty rows
+function xlTidy(rows){var w=0,out=[];rows.forEach(function(r){if(r)w=Math.max(w,r.length)});
+  rows.forEach(function(r){if(!r)return;var o=[],any=false;for(var i=0;i<w;i++){var v=r[i];if(v==null)v="";if(typeof v==="string")v=v.trim();if(v!=="")any=true;o.push(v)}if(any)out.push(o)});
+  return out}
+// "€ 1.234,56", "12,50", "12.50", "(8.00)", "-3" → number, or null
+function xlAmt(v){if(typeof v==="number")return isFinite(v)?v:null;if(typeof v!=="string")return null;
+  var neg=/^\(.*\)$/.test(v)||/-/.test(v),s=v.replace(/[^\d.,]/g,"");if(!/\d/.test(s))return null;
+  var c=s.lastIndexOf(","),d=s.lastIndexOf(".");
+  if(c>=0&&d>=0)s=c>d?s.replace(/\./g,"").replace(",","."):s.replace(/,/g,"");
+  else if(c>=0||d>=0){var sp=c>=0?",":".",parts=s.split(sp);
+    // one separator with exactly three digits after it is a thousands separator (1.234 / 1,234); otherwise it is the decimal point
+    s=parts.length>2||(parts.length===2&&parts[1].length===3)?parts.join(""):parts.join(".")}
+  var n=parseFloat(s);return isNaN(n)?null:neg?-n:n}
+// a date cell, "2026-11-05", "05/11/2026", "5.11.26" → "YYYY-MM-DD", or null; dayFirst decides 05/11 vs 11/05
+function xlDate(v,dayFirst){if(v&&v.d)return v.d;if(typeof v==="number")return v>20000&&v<80000?xlSerial(v):null;if(typeof v!=="string")return null;
+  var m=/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/.exec(v),y,mo,da;
+  if(m){y=+m[1];mo=+m[2];da=+m[3]}else{m=/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})\b/.exec(v);if(!m)return null;
+    y=+m[3];if(y<100)y+=2000;mo=dayFirst?+m[2]:+m[1];da=dayFirst?+m[1]:+m[2]}
+  var dt=new Date(y,mo-1,da);return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===da?ymd(dt):null}
+var XLH={date:/^(date|day|when|ημερομην|ημ\/?νια|ημερα)/,amt:/^(amount|price|cost|total|sum|value|paid|ποσο|τιμη|κοστος|συνολο|αξια|€)/,
+  cat:/^(category|type|kind|group|κατηγορ|ειδος|τυπος)/,name:/^(name|description|desc|item|payee|merchant|shop|store|what|details|ονομα|περιγραφ|ειδος|καταστημα|αιτιολογ|τι )/,note:/^(note|comment|memo|remark|σημειωσ|σχολι|παρατηρ)/};
+var XL=null;
+function xlOther(){return catOf("Other")?"Other":state.cats[state.cats.length-1].name}
+function xlCatFor(raw,name){var k=fold(raw),hit=null;
+  if(k)state.cats.forEach(function(c){if(!hit&&(fold(c.name)===k||fold(trCat(c.name))===k))hit=c.name});
+  if(!hit&&raw)hit=exactCat(raw)||(sugOf(raw)||{}).cat||null;
+  if(!hit&&name)hit=exactCat(name)||(sugOf(name)||{}).cat||null;
+  return hit&&catOf(hit)?hit:xlOther()}
+function xlOpen(sheets){XL={sheets:sheets,s:0,map:{},cats:{},sign:"all",dups:true};xlSheet(0);$("xlm").hidden=false;$("xly").focus()}
+// a new sheet: guess the heading row and which column is which
+function xlSheet(i){XL.s=i;XL.sign="all";XL.signSet=false;var rows=sheetRows(),h=rows[0]||[],body=rows.slice(1,30);
+  XL.head=h.length>0&&h.every(function(v){return typeof v==="string"&&xlAmt(v)===null&&!xlDate(v,true)})&&body.length>0;
+  var data=XL.head?body:rows.slice(0,30),used={},m={};
+  ["note","cat","date","amt","name"].forEach(function(k){if(!XL.head)return;for(var c=0;c<h.length;c++)if(!used[c]&&XLH[k].test(fold(h[c]))){m[k]=c;used[c]=1;return}});
+  var share=function(c,f){var n=0,t=0;data.forEach(function(r){if(r[c]!==""){t++;if(f(r[c]))n++}});return t?n/t:0};
+  for(var c=0;c<(h.length||0);c++){if(used[c])continue;
+    if(m.date==null&&share(c,function(v){return !!(v&&v.d)||(typeof v==="string"&&!!xlDate(v,true))})>.6){m.date=c;used[c]=1}
+    else if(m.amt==null&&share(c,function(v){return xlAmt(v)!==null&&!(v&&v.d)})>.6){m.amt=c;used[c]=1}
+    else if(m.name==null&&share(c,function(v){return typeof v==="string"&&xlAmt(v)===null})>.6){m.name=c;used[c]=1}}
+  XL.map=m;XL.cats={};xlDraw()}
+function sheetRows(){return XL.sheets[XL.s].rows}
+function xlColName(c){var h=sheetRows()[0],L="";for(var n=c+1;n>0;n=Math.floor((n-1)/26))L=String.fromCharCode(65+(n-1)%26)+L;return XL.head&&h[c]?h[c]+" ("+L+")":X("Column ","Στήλη ")+L}
+function xlShow(v){return v&&v.d?dmy(v.d):typeof v==="number"?String(Math.round(v*100)/100):String(v)}
+// everything the import would do with the current choices
+function xlPlan(){var rows=sheetRows().slice(XL.head?1:0),m=XL.map,out={add:[],noData:0,sign:0,dup:0,neg:0,pos:0,rawCats:{}},dayFirst=true;
+  if(m.date!=null)rows.forEach(function(r){var x=/^(\d{1,2})[-\/.](\d{1,2})[-\/.]/.exec(typeof r[m.date]==="string"?r[m.date]:"");if(x&&+x[2]>12&&+x[1]<=12)dayFirst=false});
+  rows.forEach(function(r){var a=m.amt!=null?xlAmt(r[m.amt]):null;if(a)a<0?out.neg++:out.pos++});
+  var mixed=out.neg>0&&out.pos>0;if(!mixed)XL.sign="all";else if(XL.sign==="all"&&!XL.signSet)XL.sign=out.neg>=out.pos?"neg":"pos";
+  rows.slice(0,5000).forEach(function(r){
+    var dt=m.date!=null?xlDate(r[m.date],dayFirst):null,a=m.amt!=null?xlAmt(r[m.amt]):null;
+    if(!dt||!a){out.noData++;return}
+    if((XL.sign==="neg"&&a>0)||(XL.sign==="pos"&&a<0)){out.sign++;return}
+    var nm=m.name!=null?xlShow(r[m.name]).slice(0,80):"",raw=m.cat!=null?xlShow(r[m.cat]).slice(0,40):"",k=fold(raw);
+    if(m.cat!=null&&k&&!(k in XL.cats))XL.cats[k]=xlCatFor(raw,"");
+    if(m.cat!=null&&k)out.rawCats[k]=raw;
+    var cat=m.cat!=null&&k?XL.cats[k]:xlCatFor("",nm),o={name:nm||cat,amt:Math.round(Math.abs(a)*100)/100,freq:0,cat:cat,date:dt};
+    var nt=m.note!=null?xlShow(r[m.note]).trim().slice(0,300):"";if(nt)o.note=nt;
+    if(XL.dups&&(dupOf(o)||out.add.some(function(p){return p.name===o.name&&p.cat===o.cat&&p.date===o.date&&p.amt===o.amt}))){out.dup++;return}
+    out.add.push(o)});
+  out.mixed=mixed;return out}
+function xlDraw(){var m=XL.map,P=xlPlan(),rows=sheetRows(),h='';
+  if(XL.sheets.length>1)h+='<label class="xlr"><span>'+X("Sheet","Φύλλο")+'</span><select data-xl="sheet">'+XL.sheets.map(function(s,i){return '<option value="'+i+'"'+(i===XL.s?' selected':'')+' data-notr>'+esc(s.name)+'</option>'}).join("")+'</select></label>';
+  h+='<label class="xlck"><input type="checkbox" data-xl="head"'+(XL.head?' checked':'')+'> '+X("The first row has the column names","Η πρώτη γραμμή έχει τα ονόματα των στηλών")+'</label>';
+  var w=rows[0]?rows[0].length:0,opt=function(k){var o='<option value="">'+(k==="date"||k==="amt"?X("Choose a column","Επιλέξτε στήλη"):X("None","Καμία"))+'</option>';for(var c=0;c<w;c++)o+='<option value="'+c+'"'+(m[k]===c?' selected':'')+' data-notr>'+esc(xlColName(c))+'</option>';return o};
+  [["date",X("Date","Ημερομηνία")],["amt",X("Amount","Ποσό")],["cat",X("Category","Κατηγορία")],["name",X("Name","Όνομα")],["note",X("Note","Σημείωση")]].forEach(function(f){
+    h+='<label class="xlr"><span>'+f[1]+(f[0]==="date"||f[0]==="amt"?'':' <small>'+X("(optional)","(προαιρετικό)")+'</small>')+'</span><select data-xl="'+f[0]+'">'+opt(f[0])+'</select></label>'});
+  if(P.mixed)h+='<label class="xlr"><span>'+X("Which amounts are expenses?","Ποια ποσά είναι έξοδα;")+'</span><select data-xl="sign"><option value="neg"'+(XL.sign==="neg"?' selected':'')+'>'+X("Negative ("+P.neg+")","Αρνητικά ("+P.neg+")")+'</option><option value="pos"'+(XL.sign==="pos"?' selected':'')+'>'+X("Positive ("+P.pos+")","Θετικά ("+P.pos+")")+'</option><option value="all"'+(XL.sign==="all"?' selected':'')+'>'+X("All","Όλα")+'</option></select></label>';
+  var ks=Object.keys(P.rawCats);
+  if(ks.length){h+='<h4>'+X("Categories in the file","Κατηγορίες στο αρχείο")+'</h4>'+ks.slice(0,60).map(function(k){
+    return '<label class="xlr"><span data-notr>'+esc(P.rawCats[k])+'</span><select data-xlc="'+esc(k)+'">'+state.cats.map(function(c){return '<option value="'+esc(c.name)+'"'+(c.name===XL.cats[k]?' selected':'')+'>'+esc(cn(c.name))+'</option>'}).join("")+'</select></label>'}).join("")}
+  else if(m.cat==null&&m.date!=null&&m.amt!=null)h+='<p class="hint">'+X("No category column: each expense gets a category from its name, or “Other”.","Χωρίς στήλη κατηγορίας: κάθε έξοδο παίρνει κατηγορία από το όνομά του, ή «Άλλο».")+'</p>';
+  h+='<label class="xlck"><input type="checkbox" data-xl="dups"'+(XL.dups?' checked':'')+'> '+X("Skip rows that look like expenses you already have","Παράλειψη γραμμών που μοιάζουν με έξοδα που ήδη υπάρχουν")+'</label>';
+  var pv=P.add.slice(0,5);
+  if(pv.length)h+='<div class="xlt"><table data-notr><tr><th>'+X("Date","Ημερομηνία")+'</th><th>'+X("Name","Όνομα")+'</th><th>'+X("Category","Κατηγορία")+'</th><th class="num">'+X("Amount","Ποσό")+'</th></tr>'+pv.map(function(o){
+    return '<tr><td>'+dmy(o.date)+'</td><td>'+esc(o.name)+(o.note?'<small>'+esc(o.note)+'</small>':'')+'</td><td>'+esc(cn(o.cat))+'</td><td class="num">'+fmt(o.amt)+'</td></tr>'}).join("")+'</table></div>'+(P.add.length>5?'<p class="hint">'+X("The first 5 are shown.","Εμφανίζονται τα 5 πρώτα.")+'</p>':'');
+  var sk=[];if(P.noData)sk.push(P.noData+X(" without a date or amount"," χωρίς ημερομηνία ή ποσό"));if(P.sign)sk.push(P.sign+(XL.sign==="neg"?(P.sign===1?X(" positive amount"," θετικό ποσό"):X(" positive amounts"," θετικά ποσά")):(P.sign===1?X(" negative amount"," αρνητικό ποσό"):X(" negative amounts"," αρνητικά ποσά"))));if(P.dup)sk.push(P.dup+X(" already in your expenses"," υπάρχουν ήδη"));
+  h+='<p class="xls"><b>'+(m.date==null||m.amt==null?X("Choose the Date and Amount columns.","Επιλέξτε τις στήλες Ημερομηνία και Ποσό."):P.add.length+(P.add.length===1?X(" expense will be added"," έξοδο θα προστεθεί"):X(" expenses will be added"," έξοδα θα προστεθούν")))+'</b>'+(sk.length?'<br><small>'+X("Skipped: ","Παραλείπονται: ")+sk.join(" · ")+'</small>':'')+'</p>';
+  $("xlb").innerHTML=h;$("xly").disabled=!P.add.length;XL.plan=P}
+$("xl").addEventListener("click",function(){$("xlf").click()});
+$("xlf").addEventListener("change",function(){var f=this.files[0];this.value="";if(!f)return;
+  f.arrayBuffer().then(function(b){var u=new Uint8Array(b.slice(0,4));
+    if(u[0]===0xD0&&u[1]===0xCF){alert(X("This is an old Excel file (.xls). Open it in Excel and use Save as → Excel Workbook (.xlsx), then import that.","Αυτό είναι παλιό αρχείο Excel (.xls). Ανοίξτε το στο Excel, επιλέξτε Αποθήκευση ως → Βιβλίο εργασίας Excel (.xlsx) και εισαγάγετε εκείνο."));return null}
+    if(u[0]===0x50&&u[1]===0x4B){if(typeof DecompressionStream==="undefined"){alert(X("This browser can’t open .xlsx files. Save the sheet as CSV and import that.","Αυτός ο browser δεν ανοίγει αρχεία .xlsx. Αποθηκεύστε το φύλλο ως CSV και εισαγάγετε εκείνο."));return null}return xlReadXlsx(b)}
+    return xlReadCsv(b)})
+  .then(function(s){if(s===null)return;if(!s||!s.length){alert(X("No rows were found in that file.","Δεν βρέθηκαν γραμμές σε αυτό το αρχείο."));return}xlOpen(s)})
+  .catch(function(){alert(X("That file couldn’t be read. Use an Excel (.xlsx) or CSV file.","Το αρχείο δεν διαβάστηκε. Χρησιμοποιήστε αρχείο Excel (.xlsx) ή CSV."))})});
+$("xlb").addEventListener("change",function(e){var t=e.target,k=t.getAttribute("data-xl"),c=t.getAttribute("data-xlc");
+  if(c!=null){XL.cats[c]=t.value;xlDraw();return}
+  if(k==="sheet"){xlSheet(+t.value);return}
+  if(k==="head")XL.head=t.checked;else if(k==="dups")XL.dups=t.checked;else if(k==="sign"){XL.sign=t.value;XL.signSet=true}
+  else if(k){var v=t.value===""?null:+t.value;Object.keys(XL.map).forEach(function(f){if(XL.map[f]===v&&v!==null)delete XL.map[f]});if(v===null)delete XL.map[k];else XL.map[k]=v}
+  xlDraw()});
+function xlClose(){$("xlm").hidden=true;$("xlb").innerHTML="";XL=null}
+$("xlc").addEventListener("click",xlClose);
+$("xlm").addEventListener("click",function(e){if(e.target===this)xlClose()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("xlm").hidden&&$("dlg").hidden)xlClose()});
+$("xly").addEventListener("click",function(){var add=XL&&XL.plan?XL.plan.add:[];if(!add.length)return;var t=today(),ids={};
+  add.forEach(function(o){o.id=nid();o.created=t;ids[o.id]=1;state.items.push(o)});
+  xlClose();save();render();
+  editToast(X("Imported "+add.length+(add.length===1?" expense":" expenses"),"Εισήχθησαν "+add.length+(add.length===1?" έξοδο":" έξοδα")),null,null,function(){
+    for(var i=state.items.length-1;i>=0;i--)if(ids[state.items[i].id])state.items.splice(i,1);save();render()})});
 
 var trY=null,trSel=null,TR3_EN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],TR3_EL=["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
 function trAxis(v){return v>=1000?(Math.round(v/100)/10)+"k":String(Math.round(v))}
@@ -1889,15 +2154,15 @@ document.addEventListener("focusin",function(e){var b=e.target.classList&&e.targ
 
 /* ===== View (optional cards) + What if ===== */
 function applyView(){if(!document.querySelector)return;var sh=state.show||{};
-  VIEWS.forEach(function(k){var sl=document.querySelector('.slot[data-card="'+k+'"]');if(sl)sl.hidden=sh[k]===false});
+  VIEWS.forEach(function(k){var sl=document.querySelector('.slot[data-card="'+k+'"]');if(sl)sl.hidden=!shown(k)});
   var vis=function(id){return Array.prototype.some.call($(id).children,function(c){return c.classList.contains("slot")&&!c.hidden})};
   document.body.classList.toggle("nL",!vis("colL"));document.body.classList.toggle("nR",!vis("colR"));
-  Array.prototype.forEach.call(document.querySelectorAll("#viewp [data-view]"),function(c){c.checked=sh[c.getAttribute("data-view")]!==false});
-  var n=VIEWS.filter(function(k){return sh[k]===false}).length;$("viewb").classList.toggle("on",n>0)}
+  Array.prototype.forEach.call(document.querySelectorAll("#viewp [data-view]"),function(c){c.checked=shown(c.getAttribute("data-view"))});
+  var n=Object.keys(sh).length;$("viewb").classList.toggle("on",n>0)}
 function viewOpen(v){var p=$("viewp");p.hidden=!v;$("viewb").setAttribute("aria-expanded",String(v));if(v){$("opt").hidden=true;$("gear").setAttribute("aria-expanded","false")}}
 $("viewb").addEventListener("click",function(e){e.stopPropagation();viewOpen($("viewp").hidden)});
 $("viewx").addEventListener("click",function(){viewOpen(false)});
-// phones: Simple, View, Edit and Settings sit behind the ⋯ button; picking one closes the menu
+// phones: Simple, Sections, Edit and Settings sit behind the ⋯ button; picking one closes the menu
 function moreOpen(v){$("hmw").classList.toggle("open",v);$("hmb").setAttribute("aria-expanded",String(v))}
 $("hmb").addEventListener("click",function(e){e.stopPropagation();var v=!$("hmw").classList.contains("open");moreOpen(v);if(v)$("simpleb").focus()});
 var hmLast=null;$("hmw").addEventListener("click",function(e){hmLast=e.target.closest("button");moreOpen(false)},true);
@@ -1911,12 +2176,12 @@ $("gear").addEventListener("click",function(){if(!$("opt").hidden)viewOpen(false
 document.addEventListener("click",function(e){if(!$("viewp").hidden&&!e.target.closest("#viewp")&&!e.target.closest("#viewb"))viewOpen(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("viewp").hidden){viewOpen(false);$("viewb").focus()}});
 $("viewp").addEventListener("change",function(e){var c=e.target.closest("[data-view]");if(!c)return;var k=c.getAttribute("data-view");
-  state.show=state.show||{};if(c.checked)delete state.show[k];else state.show[k]=false;save();applyView();render()});
+  state.show=state.show||{};if(c.checked===(HIDEDEF.indexOf(k)<0))delete state.show[k];else state.show[k]=c.checked;save();applyView();render()});
 
 var wiP={};
 function wiRows(){var cur=idxOf(today()),out=[],S=LS();
   S.items.forEach(function(it){if(it.freq>0&&dueIn(it,cur)){var m=monthAmt(it,cur);if(m>0)out.push({k:it.id,n:it.name,m:m,id:it.id})}});
-  S.cats.forEach(function(c){if(!c.bill)return;var l=lastOf(c.name);if(l&&l.amt>0)out.push({k:"b:"+c.name,n:c.name,m:l.amt/(c.every||1),bill:1})});
+  S.cats.forEach(function(c){if(!c.bill)return;var l=lastOf(c.name);if(l&&l.amt>0)out.push({k:"b:"+c.name,n:c.name,m:l.amt/billEvery(c.name),bill:1})});
   out.sort(function(a,b){return b.m-a.m});return out.slice(0,8)}
 function wiTotals(rows){var sv=0,tot=0;rows.forEach(function(r){var p=wiP[r.k]||0;sv+=r.m*p/100});tot=sumM(idxOf(today()));return {sv:sv,tot:tot}}
 function wiSumHTML(rows){var T=wiTotals(rows),t=X;
@@ -1924,13 +2189,13 @@ function wiSumHTML(rows){var T=wiTotals(rows),t=X;
   return t("You would save ","Θα εξοικονομούσατε ")+'<b>'+fmt(T.sv)+t(" a month","/μήνα")+'</b> · <b>'+fmt(T.sv*12)+t(" a year","/έτος")+'</b>'+(T.tot>0?'<br>'+t("This month: ","Αυτόν τον μήνα: ")+fmt(T.tot)+' → '+fmt(Math.max(0,T.tot-T.sv)):"")}
 function wiLine(r){var p=wiP[r.k]||0;if(!p)return '<span>'+X("No change","Καμία αλλαγή")+'</span>';
   return '<span>'+X("Save ","Εξοικονόμηση ")+'<b>'+fmt(r.m*p/100)+X("/mo","/μήνα")+'</b> · <b>'+fmt(r.m*p*.12)+X("/yr","/έτος")+'</b></span>'+(r.id?'<button type="button" class="ghost" data-wiap="'+esc(r.k)+'">'+X("Apply","Εφαρμογή")+'</button>':'')}
-function renderWhatIf(){var box=$("wif");if(!box||state.simple||(state.show&&state.show.whatif===false))return;
+function renderWhatIf(){var box=$("wif");if(!box||state.simple||!shown("whatif"))return;
   var rows=wiRows();
   if(!rows.length){box.innerHTML='<div class="empty">'+X("Add a recurring expense or a bill to try this out.","Προσθέστε ένα επαναλαμβανόμενο έξοδο ή λογαριασμό για να το δοκιμάσετε.")+'</div>';return}
   Object.keys(wiP).forEach(function(k){if(!rows.some(function(r){return r.k===k}))delete wiP[k]});
   box.innerHTML='<div class="wsum" id="wis" aria-live="polite">'+wiSumHTML(rows)+'</div>'+rows.map(function(r){var p=wiP[r.k]||0;
     return '<div class="wir" data-wik="'+esc(r.k)+'"><div class="wt"><span>'+esc(r.n)+(r.bill?' <small>('+X("bill","λογαριασμός")+')</small>':'')+'</span><span>'+fmt(r.m)+X("/mo","/μήνα")+'</span></div>'+
-      '<input type="range" min="0" max="100" step="1" value="'+Math.round(p)+'" data-wik="'+esc(r.k)+'" aria-label="'+esc(X("Cut “"+r.n+"” by percent","Περικοπή «"+r.n+"» κατά ποσοστό"))+'"><div class="wnew"><label>'+X("Or type a new amount per month","Ή πληκτρολογήστε νέο ποσό ανά μήνα")+'<input type="number" class="wiv" min="0" max="'+r.m.toFixed(2)+'" step="0.01" value="'+(r.m*(1-p/100)).toFixed(2)+'" data-wik="'+esc(r.k)+'"></label></div><div class="ws"><span class="wpc">'+(Math.round(p*10)/10)+'%</span><span class="wl">'+wiLine(r)+'</span></div></div>'}).join("")+
+      '<input type="range" min="0" max="100" step="1" value="'+Math.round(p)+'" data-wik="'+esc(r.k)+'" aria-label="'+esc(X("Cut “"+r.n+"” by percent","Περικοπή «"+r.n+"» κατά ποσοστό"))+'"><div class="wnew"><label>'+X("Or type a new amount per month","Ή πληκτρολογήστε νέο ποσό ανά μήνα")+'<input type="number" inputmode="decimal" class="wiv" min="0" max="'+r.m.toFixed(2)+'" step="0.01" value="'+(r.m*(1-p/100)).toFixed(2)+'" data-wik="'+esc(r.k)+'"></label></div><div class="ws"><span class="wpc">'+(Math.round(p*10)/10)+'%</span><span class="wl">'+wiLine(r)+'</span></div></div>'}).join("")+
     '<button type="button" class="ghost" id="wireset" style="margin-top:8px">'+X("Reset sliders","Μηδενισμός")+'</button>'}
 document.addEventListener("input",function(e){var r=e.target;if(!r.matches||!r.matches('#wif input[type=range],#wif input.wiv'))return;
   var k=r.getAttribute("data-wik"),rows=wiRows(),row=rows.filter(function(x){return x.k===k})[0];if(!row)return;

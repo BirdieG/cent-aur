@@ -3,7 +3,7 @@
 Covers the first sign-in with admin/admin, saving, two devices, edits clashing between devices,
 losing the connection, managing users, the backup download and signing out.
 """
-import json, os, sys, time
+import datetime, json, os, sys, time
 from playwright.sync_api import sync_playwright
 
 BASE = os.environ.get("BASE", "http://localhost:8080").rstrip("/") + "/"
@@ -187,6 +187,127 @@ with sync_playwright() as pw:
     item = next(i for i in data_of(A)["data"]["items"] if i["name"] == "Note test")
     check("note" not in item, "clearing the note removes it")
 
+    # ---- number boxes refuse "e" and "+" (the browser would accept 1e5)
+    A.fill("#amt", "")
+    A.click("#amt")
+    A.keyboard.type("1e+5")
+    check(A.input_value("#amt") == "15", "amount box ignores e and + (%r)" % A.input_value("#amt"))
+    A.fill("#amt", "")
+
+    # ---- import from Excel: columns guessed from the headings, row without an amount skipped, Undo takes it all back
+    A.set_input_files("#xlf", os.path.join(os.path.dirname(os.path.abspath(__file__)), "expenses-sample.xlsx"))
+    A.wait_for_selector("#xlm:not([hidden]) .xls")
+    check(A.input_value('#xlb select[data-xl="date"]') == "0" and A.input_value('#xlb select[data-xl="amt"]') == "3", "import finds the Date and Price columns by their headings")
+    check("6 expenses will be added" in A.inner_text("#xlb .xls"), "import counts the rows it will add, skipping one without an amount")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#xly")
+    items = data_of(A)["data"]["items"]
+    d = [i for i in items if i["name"] == "Dentist"]
+    check(len(d) == 1 and d[0]["date"] == "2026-10-20" and d[0]["amt"] == 80 and d[0]["cat"] == "Health" and d[0].get("note") == "filling, pay rest in Dec",
+          "imported expense has its date, amount, category and note (%s)" % d)
+    check(len([i for i in items if i["name"] in ("Lidl", "Rent", "Shell", "Coffee Island", "Dentist")]) == 6, "all six rows are imported")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#toastu")
+    check(not any(i["name"] == "Dentist" for i in data_of(A)["data"]["items"]), "Undo removes the whole import")
+
+    # ---- reminders: set when adding a bill, moved on when the next bill is paid, deleted from Profile
+    def add_bill(page, cat, amount, date):
+        page.click("#ddb")
+        page.click("#ddm button:has-text('%s')" % cat)
+        page.fill("#amt", str(amount))
+        page.fill("#dt", date)
+    A.click("#ddb")
+    A.click("#ddm button:has-text('Housing')")
+    check(A.is_hidden("#rmw"), "no Set a reminder for a category that isn't a bill")
+    add_bill(A, "Electricity", 60, "2026-01-15")
+    check(A.is_visible("#rmt"), "Set a reminder shows for a bill")
+    check(A.is_enabled("#freq") and A.input_value("#freq") == "0", "a bill starts as one-time, and How often can still be changed")
+    A.click("#rmt")
+    check(A.input_value("#rmd") == "2026-02-15", "the reminder's date starts one month after the bill (%s)" % A.input_value("#rmd"))
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    rems = data_of(A)["data"].get("rems", [])
+    check(len(rems) == 1 and rems[0]["cat"] == "Electricity" and rems[0]["rep"] == "m" and rems[0]["date"] == "2026-02-15", "the reminder is saved (%s)" % rems)
+    add_bill(A, "Electricity", 64, "2026-02-10")
+    check(A.is_hidden("#rmt") and "next 15/02/2026" in A.inner_text("#rmi"), "a bill with a reminder says so instead of offering a new one")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    rems = data_of(A)["data"].get("rems", [])
+    check(len(rems) == 1 and rems[0]["date"] == "2026-03-15", "paying the bill moves the reminder to the next month (%s)" % rems)
+    # a second house: its own reminder in the same category, tied to its own name
+    add_bill(A, "Electricity", 30, "2026-02-20")
+    A.fill("#name", "Electricity Beach house")
+    check(A.is_visible("#rmt"), "another bill name in the same category can get its own reminder")
+    A.click("#rmt")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    rems = {r["name"]: r["date"] for r in data_of(A)["data"].get("rems", [])}
+    check(rems == {"Electricity": "2026-03-15", "Electricity Beach house": "2026-03-20"}, "two Electricity reminders, one per name (%s)" % rems)
+    profile(A)
+    A.click("#rmo")
+    check(A.locator("#rml .rmr").count() == 2, "Profile → Reminders lists both reminders")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#rml .rmr:has-text('Beach house') [data-rmd]")
+        A.click("#dlgy")
+    rems = [r["name"] for r in data_of(A)["data"].get("rems", [])]
+    check(rems == ["Electricity"], "deleting a reminder removes only that one (%s)" % rems)
+    check(sum(1 for i in data_of(A)["data"]["items"] if i["cat"] == "Electricity") == 3, "the bills stay after deleting their reminder")
+    A.click("#rmc")
+    A.click("#pfx")
+    # the remaining reminder (15 March, so overdue now) offers its average so far, and Paid adds the bill without the form
+    box = A.locator(".ri:has-text('Electricity') [data-rqa]")
+    check(box.input_value() == "62.00", "a due reminder asks how much it was, filled in with the average of its bills (%s)" % box.input_value())
+    check(A.is_visible("#yest") and "still expected" in A.inner_text("#yest"), "the year shows the bills still expected, apart with ≈")
+    box.fill("66")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click(".ri:has-text('Electricity') [data-rqs]")
+    d = data_of(A)["data"]
+    check(any(i["name"] == "Electricity" and i["amt"] == 66 and i["date"] == "2026-03-15" for i in d["items"]), "Paid adds the bill on its due date")
+    check([r["date"] for r in d["rems"]] == ["2026-04-15"], "and moves the reminder on (%s)" % d["rems"])
+    # repeating, but the amount changes: saved as this one payment plus a reminder, never as a fixed monthly amount
+    A.fill("#amt", "25")
+    A.fill("#name", "Gym")
+    A.select_option("#freq", "12")
+    check(A.is_visible("#vyw") and not A.is_visible("#rmw"), "a repeating expense offers “The amount changes each time”")
+    A.check("#vy")
+    A.fill("#dt", "2026-04-01")
+    check(A.is_visible("#endw"), "it still offers Ends after")
+    A.fill("#endm", "2026-08")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    d = data_of(A)["data"]
+    gym = [i["freq"] for i in d["items"] if i["name"] == "Gym"]
+    rem = [(r["rep"], r["date"], r.get("v"), r.get("until")) for r in d["rems"] if r["name"] == "Gym"]
+    check(gym == [0] and rem == [("m", "2026-05-01", 1, "2026-08")], "it is saved once, with a monthly reminder until its last month (%s %s)" % (gym, rem))
+    # a future one-time expense can have a one-time reminder of its own, in any category
+    soon = (datetime.date.today() + datetime.timedelta(days=5)).isoformat()
+    A.fill("#amt", "150")
+    A.fill("#name", "Car repairs")
+    A.select_option("#freq", "0")
+    A.fill("#dt", soon)
+    A.dispatch_event("#dt", "change")
+    check(A.is_visible("#rmt"), "a one-time expense dated in the future offers Set a reminder")
+    A.click("#rmt")
+    check(A.input_value("#rmd") == soon, "its reminder starts on the expense's date")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    d = data_of(A)["data"]
+    car = [i for i in d["items"] if i["name"] == "Car repairs"]
+    rem = [(r["rep"], r["date"], r.get("item")) for r in d["rems"] if r["name"] == "Car repairs"]
+    check(len(car) == 1 and rem == [("once", soon, car[0]["id"])], "the expense is saved with a one-time reminder tied to it (%s)" % rem)
+    # after reloading, the reminders keep what they are; deleting the varying one says its estimates go too
+    A.reload()
+    A.wait_for_selector("#rmo", state="attached")
+    profile(A)
+    A.click("#rmo")
+    gym_row = A.locator("#rml .rmr:has-text('Gym')")
+    check("amount varies" in gym_row.inner_text() and "until" in gym_row.inner_text(), "after reloading, Gym still varies and ends (%s)" % gym_row.inner_text())
+    gym_row.locator("[data-rmd]").click()
+    check("estimates" in A.inner_text("#dlgm"), "deleting a varying reminder warns that its estimates go too")
+    A.click("#dlgc")
+    A.click("#rmc")
+    A.click("#pfx")
+
     # wide window, three columns: scrolling the page keeps the side columns' cards on screen
     # (partway down: at the very bottom a fixed column is pushed up by the end of the page, the left one too)
     stays = A.evaluate("""(async () => { const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -213,12 +334,45 @@ with sync_playwright() as pw:
     check(tall["up"] > tall["end"], "scrolling back up, the left column moves with the page")
     A.set_viewport_size(vp)
 
+    # ---- Savings goals, Spending by month and What if start hidden; View pushes the cards under it down, like Settings
+    hid = A.evaluate("""['goals','trend','whatif','insights'].map(k => document.querySelector('.slot[data-card="'+k+'"]').hidden)""")
+    check(hid == [True, True, True, False], "goals, spending by month and what if are hidden by default (%s)" % hid)
+    A.click("#viewb")
+    A.wait_for_selector("#viewp", state="visible")
+    push = A.evaluate("""(() => { const p = document.getElementById('viewp').getBoundingClientRect(), c = document.getElementById('colR').getBoundingClientRect();
+        return c.top >= p.bottom })()""")
+    check(push, "the open View panel moves the right column down instead of covering it")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#viewp [data-view='trend']")
+    check(data_of(A)["data"]["show"] == {"trend": True}, "ticking a card hidden by default is saved as shown")
+    A.click("#viewx")
+    A.reload()
+    A.wait_for_selector("#fmm", state="hidden")
+    check(A.is_visible(".slot[data-card='trend']"), "a card ticked in View stays shown after reloading")
+    A.click("#viewb")
+    A.click("#viewp [data-view='trend']")
+    A.click("#viewx")
+
     # ---- a second device of the same person
     B_ctx, B = device(390)
     sign_in(B, "admin", "adminpass123")
     B.wait_for_selector("#fmm", state="hidden")
     B.wait_for_function("document.querySelector('#sec').textContent.includes('Rent test')")
     check(True, "second device (phone size) shows the same data")
+
+    # ---- on a phone an expense row is two lines: ⋯ shows its pause, edit and delete, at least 44px each
+    row = B.locator("#sec .row:has([data-more])").first
+    check(row.locator(".del").is_hidden() and row.locator("[data-more]").is_visible(), "on a phone a row shows ⋯ instead of delete")
+    row.locator("[data-more]").click()
+    sizes = row.evaluate("r => [...r.querySelectorAll('.act button')].map(b => { const x = b.getBoundingClientRect(); return [Math.round(x.width), Math.round(x.height)] })")
+    check(row.locator(".del").is_visible() and all(w >= 44 and h >= 44 for w, h in sizes), "⋯ shows the row's buttons, each at least 44px (%s)" % sizes)
+    row.locator("[data-more]").click()
+    # iPhone zooms into boxes with text under 16px; money boxes open the number keypad; Clear all sits under the list
+    small = B.evaluate("""[...document.querySelectorAll('input:not([type=checkbox]):not([type=range]),select,textarea')]
+        .filter(e => e.offsetParent && parseFloat(getComputedStyle(e).fontSize) < 16).map(e => e.id || e.className)""")
+    check(small == [], "on a phone every box has text of at least 16px (%s)" % small)
+    check(B.evaluate("[...document.querySelectorAll('input[type=number]')].every(e => e.inputMode === 'decimal')"), "amount boxes open the number keypad")
+    check(B.evaluate("document.getElementById('sec2').nextElementSibling === document.getElementById('clear')"), "on a phone Clear all sits under the list")
     add_expense(B, "Coffee B", 3.5)
     come_back(A)
     check("Coffee B" in A.text_content("#sec"), "first device picks up the second device's change")
