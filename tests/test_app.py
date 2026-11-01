@@ -112,7 +112,7 @@ with sync_playwright() as pw:
     A.fill("#fm_n2", "adminpass123")
     A.click("#fmo")
     A.wait_for_selector("#fmm", state="hidden")
-    A.wait_for_selector("#acw:not([hidden])")
+    A.wait_for_selector("#acw:not([hidden])", state="attached")
     check("admin" in A.text_content("#ach"), "account block shows the admin")
     check(A.get_attribute('.appf a', "href") == gh and A.get_attribute('.appf a', "target") == "_blank", "the bottom of the app links to the code on GitHub, in a new tab")
 
@@ -131,7 +131,7 @@ with sync_playwright() as pw:
     W = A.context.new_page()
     W.add_init_script("window.__tb=[];window.ceTitleBar=function(bg,fg,dark){window.__tb.push([bg,fg,dark]);return Promise.resolve()}")
     W.goto(BASE)
-    W.wait_for_selector("#acw:not([hidden])")
+    W.wait_for_selector("#acw:not([hidden])", state="attached")
     W.emulate_media(color_scheme="dark")   # theme "auto" follows Windows; changing the theme setting itself would save and clash with A
     W.wait_for_function("__tb.length && __tb[__tb.length - 1][2] === true")
     tb = W.evaluate("""(() => { const l = __tb[__tb.length - 1], m = getComputedStyle(document.body).backgroundColor.match(/\\d+/g).map(Number);
@@ -146,7 +146,7 @@ with sync_playwright() as pw:
         route.fulfill(response=res, body=res.text().replace("</body>", "<script>document.body.appendChild(document.createElement('iframe'))</script></body>"))
     F.route(BASE, add_frame)
     F.goto(BASE)
-    F.wait_for_selector("#acw:not([hidden])")
+    F.wait_for_selector("#acw:not([hidden])", state="attached")
     check(F.evaluate("[...document.querySelectorAll('iframe')].every(f => f.title)"), "frames on the page have a title")
     F.close()
 
@@ -252,7 +252,7 @@ with sync_playwright() as pw:
     C_ctx, C = device()
     sign_in(C, "maria", "mariapass123")
     C.wait_for_selector("#fmm", state="hidden")
-    C.wait_for_selector("#acw:not([hidden])")
+    C.wait_for_selector("#acw:not([hidden])", state="attached")
     check(names(C) == [], "the new user starts with empty data")
     profile(C)
     check(not C.is_visible('[data-ac="usrm"]'), "a normal user has no Manage users button")
