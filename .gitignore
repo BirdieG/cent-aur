@@ -10,6 +10,10 @@ reset-admin.txt
 
 # Tool output
 .playwright-mcp/
+.impeccable/
+.claude/
+/DESIGN.md
+/PRODUCT.md
 __pycache__/
 
 # Editors and operating systems
