@@ -159,6 +159,25 @@ with sync_playwright() as pw:
     A.wait_for_function("document.querySelector('#sec') && document.querySelector('#sec').textContent.includes('Rent test')")
     check(calls == ["session?data=1"], "opening the page asks the server once, for the session and the data together (%s)" % calls)
     check(True, "expense is still there after reloading the page")
+
+    # ---- an amount typed with a comma (Greek keypad) is taken as a decimal; letters and 0 are refused
+    A.fill("#amt", "")
+    A.type("#amt", "12,5x0")
+    check(A.input_value("#amt") == "12.50", "a comma in an amount becomes a dot and letters are refused (%s)" % A.input_value("#amt"))
+    A.fill("#amt", "0")
+    check(not A.evaluate("document.getElementById('amt').checkValidity()"), "an amount of 0 is refused")
+    A.fill("#amt", "")
+    A.type("#amt", "3,75")
+    A.fill("#name", "Comma test")
+    A.select_option("#freq", "0")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click("#sb")
+    amt = [i["amt"] for i in data_of(A)["data"]["items"] if i["name"] == "Comma test"]
+    check(amt == [3.75], "an expense typed as 3,75 is saved as 3.75 (%s)" % amt)
+    A.fill("#q", "Comma test")
+    A.click("#sec .row:has-text('Comma test') .del")
+    A.click("#dlgy")
+    A.fill("#q", "")
     check(A.is_hidden("#fmm"), "signed in: the starting cover lifts once the data is on screen")
     check(A.evaluate("getComputedStyle(document.documentElement).overflowY") != "hidden", "signed in: the page scrolls again")
     check(A.evaluate("localStorage.getItem('expense-calc-v2')") is None, "nothing is kept in the browser's storage")
@@ -371,7 +390,7 @@ with sync_playwright() as pw:
     small = B.evaluate("""[...document.querySelectorAll('input:not([type=checkbox]):not([type=range]),select,textarea')]
         .filter(e => e.offsetParent && parseFloat(getComputedStyle(e).fontSize) < 16).map(e => e.id || e.className)""")
     check(small == [], "on a phone every box has text of at least 16px (%s)" % small)
-    check(B.evaluate("[...document.querySelectorAll('input[type=number]')].every(e => e.inputMode === 'decimal')"), "amount boxes open the number keypad")
+    check(B.evaluate("[...document.querySelectorAll('input[data-num]')].every(e => e.inputMode === 'decimal' && e.type === 'text')"), "amount boxes are text boxes with the number keypad")
     check(B.evaluate("document.getElementById('sec2').nextElementSibling === document.getElementById('clear')"), "on a phone Clear all sits under the list")
     # keyboard: names and tags are not autocorrected, tags not capitalised; a short header; Close at the bottom of Profile
     kb = B.evaluate("[document.getElementById('name').getAttribute('autocorrect'), document.getElementById('tags').getAttribute('autocapitalize'), document.getElementById('q').enterKeyHint]")

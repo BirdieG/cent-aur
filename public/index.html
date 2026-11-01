@@ -633,7 +633,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="ol">Withdraw from savings</div>
   <form id="wf" class="of">
     <input id="wd" type="date" required aria-label="Date">
-    <input id="wa" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="wa" type="text" data-num pattern="(?=.*[1-9])[0-9]*\.?[0-9]*" title="An amount above 0, e.g. 12.50" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="wr" class="w" placeholder="Reason (e.g. car repair)" maxlength="60">
     <span style="display:flex;gap:8px"><button class="primary" type="submit" id="wb">Withdraw</button><button class="ghost" type="button" id="wc" hidden>Cancel</button></span>
   </form>
@@ -646,8 +646,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Savings goals</h2></div>
   <form id="gf" class="of">
     <input id="gn" class="w" placeholder="Goal (e.g. Holiday)" maxlength="60" required aria-label="Goal name">
-    <input id="gt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Target amount" required>
-    <input id="gs" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Saved so far">
+    <input id="gt" type="text" data-num pattern="(?=.*[1-9])[0-9]*\.?[0-9]*" title="An amount above 0, e.g. 12.50" inputmode="decimal" step="0.01" min="0.01" placeholder="Target amount" required>
+    <input id="gs" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="Saved so far">
     <label class="w endw"><span>Reach it by (optional)</span><input id="gb" type="month" aria-label="Target month"></label>
     <span class="w" style="display:flex;gap:8px"><button class="primary" type="submit" id="gsb">Add goal</button><button class="ghost" type="button" id="gsc" hidden>Cancel</button></span>
   </form>
@@ -661,7 +661,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="ol">One-off money (a sale, a gift, stocks&hellip;)</div>
   <form id="eof" class="of">
     <input id="eod" type="date" required aria-label="Date">
-    <input id="eoa" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="eoa" type="text" data-num pattern="(?=.*[1-9])[0-9]*\.?[0-9]*" title="An amount above 0, e.g. 12.50" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="eon" class="w" placeholder="What was it? (e.g. sold my bike)" maxlength="60">
     <select id="eot" aria-label="Where does it go"><option value="savings">To savings</option><option value="budget">To budget</option></select>
     <span style="display:flex;gap:8px"><button class="primary" type="submit" id="eob">Add</button><button class="ghost" type="button" id="eoc" hidden>Cancel</button></span>
@@ -687,7 +687,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="slot" data-card="add"><div class="ctl" hidden><b>Add expense</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card">
   <form id="f">
-    <input id="amt" type="number" inputmode="decimal" enterkeyhint="next" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
+    <input id="amt" type="text" data-num pattern="(?=.*[1-9])[0-9]*\.?[0-9]*" title="An amount above 0, e.g. 12.50" inputmode="decimal" enterkeyhint="next" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
     <div class="nw" id="nw"><input id="name" autocorrect="off" spellcheck="false" placeholder="Name (e.g. Rent, Mobile phone 2)" aria-label="Name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
     <select id="freq" aria-label="How often">
       <option value="0">One-time</option>
@@ -808,7 +808,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <div class="yb" style="margin-top:0"><span>Earned</span><b id="fye" class="pos">0.00</b></div>
     <div class="yb" style="margin-top:0"><span>Expenses</span><b id="fyx" class="neg">0.00</b></div>
     <div class="yb" style="margin-top:0"><span>Profit</span><b id="fyp">0.00</b></div>
-    <label class="inc"><span>Set aside for tax (% of profit)</span><input id="fltax" type="number" inputmode="decimal" min="0" max="100" step="0.5" placeholder="0"></label>
+    <label class="inc"><span>Set aside for tax (% of profit)</span><input id="fltax" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" min="0" max="100" step="0.5" placeholder="0"></label>
     <div class="yb"><span>Tax to set aside this year</span><b id="fltaxv">0.00</b></div>
   </div>
   <p class="hint">Freelancer earnings and expenses are kept separate: they never change your Personal totals, budget or savings.</p>
@@ -850,11 +850,11 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="card adv" id="fltc">
 <details class="fcd" id="fcd"><summary><h2>Φόρος επιτηδεύματος &middot; tax calculator</h2></summary>
   <p class="hint" id="fctop">Estimate of income tax, ΕΦΚΑ contributions and the τέλος επιτηδεύματος.</p>
-  <label class="inc"><span>Annual revenue</span><input id="fcrev" type="number" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
-  <label class="inc"><span>Business expenses</span><input id="fcexp" type="number" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
-  <label class="inc"><span>ΕΦΚΑ contribution per month</span><span style="display:flex;gap:8px;align-items:center"><button type="button" class="pill" id="fcefk1" title="Main pension + health, 1st category, 2026 (approximate)">1st cat. 250.77</button><input id="fcefka" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc"><span>Annual revenue</span><input id="fcrev" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
+  <label class="inc"><span>Business expenses</span><input id="fcexp" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="from your entries"></label>
+  <label class="inc"><span>ΕΦΚΑ contribution per month</span><span style="display:flex;gap:8px;align-items:center"><button type="button" class="pill" id="fcefk1" title="Main pension + health, 1st category, 2026 (approximate)">1st cat. 250.77</button><input id="fcefka" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <label class="inc"><span>Age group (tax year 2026 and later)</span><select id="fcage"><option value="31">31 and over</option><option value="26">26 &ndash; 30</option><option value="25">Up to 25</option></select></label>
-  <label class="inc"><span>Τέλος επιτηδεύματος</span><span style="display:flex;gap:8px;align-items:center"><select id="fcpre" aria-label="Status"><option value="free">Freelancer &ndash; exempt</option><option value="block">Μπλοκάκι &ndash; 400-500</option><option value="biz">Business &ndash; 800-1,000</option><option value="custom">Custom</option></select><input id="fcfee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc"><span>Τέλος επιτηδεύματος</span><span style="display:flex;gap:8px;align-items:center"><select id="fcpre" aria-label="Status"><option value="free">Freelancer &ndash; exempt</option><option value="block">Μπλοκάκι &ndash; 400-500</option><option value="biz">Business &ndash; 800-1,000</option><option value="custom">Custom</option></select><input id="fcfee" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <label class="oc"><input type="checkbox" id="fcfirst"> First year of activity (no tax prepayment)</label>
   <div id="fcres"></div>
   <button type="button" class="pill" id="fcapply">Use as my tax set-aside %</button>
@@ -869,7 +869,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Add earning or expense</h2></div>
   <div class="chips"><button type="button" class="flchip on" data-fltype="in">Earning</button><button type="button" class="flchip" data-fltype="out">Expense</button></div>
   <form id="flf" class="of">
-    <input id="fla" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
+    <input id="fla" type="text" data-num pattern="(?=.*[1-9])[0-9]*\.?[0-9]*" title="An amount above 0, e.g. 12.50" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" required>
     <input id="fld" type="date" required aria-label="Date">
     <div class="w vf" id="flvatw" hidden>
       <select id="flinc" aria-label="Is the amount before or after VAT?"><option value="0">Amount is before VAT</option><option value="1">Amount is after VAT</option></select>
@@ -894,9 +894,9 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="hp" role="dialog" aria-modal="true" aria-labelledby="pft">
   <div class="head"><h2 id="pft">Profile</h2><button type="button" class="ghost" id="pfx" aria-label="Close profile">✕</button></div>
   <h3>Budget</h3>
-  <label class="inc adv"><span>Monthly salary</span><span style="display:flex;gap:8px"><select id="pay" aria-label="Salary payments per year"><option value="12">× 12</option><option value="14">× 14</option><option value="14.5">× 14.5</option></select><input id="sal" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
+  <label class="inc adv"><span>Monthly salary</span><span style="display:flex;gap:8px"><select id="pay" aria-label="Salary payments per year"><option value="12">× 12</option><option value="14">× 14</option><option value="14.5">× 14.5</option></select><input id="sal" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></span></label>
   <details id="xs" class="adv fcd" hidden><summary><h2>Extra salaries &mdash; paid into savings in the month they arrive</h2></summary><div id="xsl"></div></details>
-  <label class="inc"><span>Monthly budget</span><input id="inc" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></label>
+  <label class="inc"><span>Monthly budget</span><input id="inc" type="text" data-num pattern="[0-9]*\.?[0-9]*" title="An amount, e.g. 12.50" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></label>
   <details class="mbd adv" id="mbd"><summary>Budget per month</summary><div id="mbl"></div></details>
   <h3>Reminders</h3>
   <p class="hint" id="rmsum" data-notr></p>
