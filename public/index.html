@@ -360,7 +360,7 @@ body.nL.nR:not(.editing) .cols{grid-template-columns:minmax(0,900px);justify-con
 #tags,#endw{grid-column:span 2}
 .endw{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem}.endw input{flex:1;min-width:0}
 .hintd>summary{justify-content:flex-start;padding:0;margin-top:8px;color:var(--muted);font-size:.85rem;width:max-content;max-width:100%}.hintd>summary::before{margin-right:6px}.hintd .hint{margin-top:4px}.of+.hintd{margin-bottom:14px}
-.recd{margin-top:12px}.recd>summary{color:var(--muted);font-weight:600}
+.recd>summary{color:var(--accent);font-weight:600}#sec2>details:last-child{border-bottom:1px solid var(--line)}
 .rr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .rr:first-child{border-top:none}.rr small{display:block;color:var(--muted)}
 .rs{font-size:.72rem;padding:0 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
@@ -372,7 +372,7 @@ body.nL.nR:not(.editing) .cols{grid-template-columns:minmax(0,900px);justify-con
 .glh small,.gls small{color:var(--muted);display:block}
 .gls{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
 .gla{display:flex;gap:6px;align-items:center}.gla input{width:92px;padding:4px 8px}.gla .pill{margin-top:0}
-.gl.done .bb i{background:#2f9e44}
+.gl .bb i{background:var(--accent)}.gl.done .bb i{background:#2f9e44}
 .vf{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vpv{color:var(--muted);font-size:.85rem;margin-top:-2px}
 .vtop{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:10px 0}
@@ -693,6 +693,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="chips" id="yrs"></div>
   <div id="sec"></div>
   <details class="recd" id="recd"><summary><span class="sum">Recurring expenses</span><span class="num" id="recn"></span></summary><div id="recl" class="scl s"></div><p class="hint">Pause an expense that repeats while you are not paying it, or end it for good. Past months stay exactly as they were.</p></details>
+  <div id="sec2"></div>
 </div>
 </div>
 <div class="slot" data-card="bills"><div class="ctl" hidden><b>Bills history</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>

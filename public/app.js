@@ -528,7 +528,7 @@ function render(){
     return '<div class="ri od"><div>'+ic(r.cat.name)+esc(r.cat.name)+'<small>'+t+' · '+dm(r.due)+' · '+MN(idxOf(r.month))+(lastOf(r.cat.name)?' · last bill '+fmt(lastOf(r.cat.name).amt):'')+'</small></div>'+
       '<div class="ra"><button type="button" class="pill" data-add="'+k+'">Add expense</button><button type="button" class="pill" data-later="'+k+'">Remind me later</button></div>'+
       (laterKey===r.key?'<div class="later"><span>Remind me again:</span><button type="button" data-sn="h1" data-k="'+k+'">In 1 hour</button><button type="button" data-sn="tm" data-k="'+k+'">Tomorrow morning</button><button type="button" data-sn="d3" data-k="'+k+'">In 3 days</button><button type="button" data-sn="w1" data-k="'+k+'">In a week</button><input type="datetime-local" id="snd" aria-label="Remind me at"><button type="button" data-snd="'+k+'">Set</button></div>':'')+'</div>'}).join("")+'</div>':"";
-  var h="";
+  var h="",g="";
   if(selYear===cy){
     var rows=rowsFor(ci);
     h+='<div class="cur"><div class="head"><h2>This month ('+MN(ci)+')</h2><span class="num">'+fmt(cm)+(inc>0?' of '+fmt(inc)+(state.budgets&&state.budgets[ymOf(ci)]!=null?' (custom)':'')+(oneSum(LS(),ci,"budget")>0?' <span class="gd">+'+fmt(oneSum(LS(),ci,"budget"))+' extra</span>':''):'')+'</span></div>';
@@ -536,13 +536,14 @@ function render(){
       h+='<div class="bb"><i style="width:'+Math.min(pm2,100)+'%;background:'+c2+'"></i></div><div class="st" style="color:'+textColorFor(pm2)+'">'+pm2.toFixed(0)+'% of the monthly budget used · '+(l2>=0?fmt(l2)+' left':fmt(-l2)+' over budget')+'</div>'}
     if(avg>0){var rl=realSav(LS(),ci,cm),pl2=planSav(LS(),ci);h+='<div class="st adv" style="color:'+(rl<0?'var(--danger)':rl>=pl2?'var(--accent)':'var(--text)')+'">Saving this month: '+fmt(rl)+' (planned '+fmt(pl2)+')</div>'}
     h+=remH+(rows.length?'<div class="scl">'+rows.map(function(it){return rowHTML(it,ci)}).join("")+'</div>':'<div class="empty">'+(qToks.length?X("No expenses match your search.","Κανένα έξοδο δεν ταιριάζει με την αναζήτηση."):"No expenses this month yet.")+'</div>')+'</div>';
-    h+=group("up","Upcoming months",months(ci+1,cy*12+11));
-    h+=group("prev","Previous months",months(cy*12,ci-1));
+    g+=group("up","Upcoming months",months(ci+1,cy*12+11));
+    g+=group("prev","Previous months",months(cy*12,ci-1));
   }else{
-    h+=group("y"+selYear,selYear>cy?"Upcoming months":"Months of "+selYear,months(selYear*12,selYear*12+11))||'<div class="empty">'+(qToks.length?X("No expenses match your search.","Κανένα έξοδο δεν ταιριάζει με την αναζήτηση."):"Nothing recorded for "+selYear+".")+'</div>';
+    g+=group("y"+selYear,selYear>cy?"Upcoming months":"Months of "+selYear,months(selYear*12,selYear*12+11))||'<div class="empty">'+(qToks.length?X("No expenses match your search.","Κανένα έξοδο δεν ταιριάζει με την αναζήτηση."):"Nothing recorded for "+selYear+".")+'</div>';
   }
   if(selYear!==cy)h=remH+h;
-  $("sec").innerHTML=h;
+  // "Recurring expenses" sits between this month and the month lists (#sec2)
+  $("sec").innerHTML=h;$("sec2").innerHTML=g;
   var grp={};Object.keys(cats).forEach(function(n){var c=catOf(n),g=c&&c.group?c.group:n,e=grp[g]||(grp[g]={total:0,icon:n,top:-1,members:{},count:0});
     e.total+=cats[n];e.members[n]=cats[n];e.count++;if(mcat[n]){e.mer=e.mer||{};Object.keys(mcat[n]).forEach(function(k){var x=e.mer[k]||(e.mer[k]={amt:0,cat:mcat[n][k].cat});x.amt+=mcat[n][k].amt})}if(cats[n]>e.top){e.top=cats[n];e.icon=n}});
   var keys=Object.keys(grp).sort(function(a,b){return grp[b].total-grp[a].total});
