@@ -713,6 +713,11 @@ $("cur").addEventListener("change",function(){state.cur=this.value;save();render
 (function(){var c=$("clear"),hd=c.parentNode,mq=window.matchMedia&&matchMedia("(max-width:620px)");if(!mq)return;
   function place(){if(mq.matches)$("sec2").parentNode.appendChild(c);else hd.appendChild(c)}
   place();if(mq.addEventListener)mq.addEventListener("change",place);else if(mq.addListener)mq.addListener(place)})();
+// phones: Help and Profile get a large Close at the bottom (shown by CSS on phones only)
+["hpx","pfx"].forEach(function(id){var x=$(id),b=document.createElement("button");b.type="button";b.className="dlgcls";b.textContent="Close";
+  b.addEventListener("click",function(){x.click()});x.closest(".hp").appendChild(b)});
+// touch keyboards: Amount → Next moves on to Name instead of adding the expense (a desktop Enter still adds it)
+$("amt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing&&window.matchMedia&&matchMedia("(pointer:coarse)").matches){e.preventDefault();$("name").focus()}});
 $("clear").addEventListener("click",function(){if(state.items.length)ask((state.items.length===1?X("Delete your only expense?","Να διαγραφεί το μοναδικό σας έξοδο;"):
   X("Delete all "+state.items.length+" expenses, from every month and year?","Να διαγραφούν και τα "+state.items.length+" έξοδα, από όλους τους μήνες και τα έτη;"))+" "+
   X("Your budget, savings and categories stay.","Ο προϋπολογισμός, οι αποταμιεύσεις και οι κατηγορίες μένουν."),function(){
@@ -808,6 +813,8 @@ function applyTheme(){
   r.style.colorScheme="";
   if(pal.l){var v=dark?pal.d:pal.l;Object.keys(VN).forEach(function(k){r.style.setProperty(VN[k],v[k])});r.style.colorScheme=dark?"dark":"light"}
   try{localStorage.setItem("xpence-theme",JSON.stringify(t))}catch(e){}
+  // Safari tints its bars with theme-color: give it the page background of this theme and mode
+  var tc=document.querySelector('meta[name="theme-color"]');if(tc&&document.body)tc.setAttribute("content",getComputedStyle(document.body).backgroundColor);
   deskTitleBar(dark)}
 // the desktop app's window title bar takes the page's background and text colours (ceTitleBar is given to the page by the app)
 // links that open a new tab: in the desktop app they open in the PC's own browser instead

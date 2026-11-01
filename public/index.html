@@ -132,7 +132,7 @@ body.fulllists .scl{max-height:none;overflow:visible}
 .dlgo{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}.dlgo[hidden]{display:none}
 .dlgb{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;width:min(380px,100%);box-shadow:0 16px 48px rgba(0,0,0,.4)}.dlgb p{margin:0 0 16px;line-height:1.45}.dlga{display:flex;justify-content:flex-end;gap:8px}
 .ordsel{font-size:.8rem;padding:6px 8px}
-.toast{position:fixed;left:16px;right:16px;bottom:20px;margin:0 auto;width:fit-content;max-width:560px;z-index:90;display:flex;align-items:center;gap:14px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.9rem}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));margin:0 auto;width:fit-content;max-width:560px;z-index:90;display:flex;align-items:center;gap:14px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:.9rem}
 .toast[hidden]{display:none}.toast span{min-width:0}.toast button{flex:none;white-space:nowrap}.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.toast button{background:none;border:1px solid currentColor;color:inherit;padding:4px 10px;border-radius:8px;cursor:pointer}
 .fcd{border-top:0;padding:0}.fcd>summary{display:list-item;list-style:none;cursor:pointer;padding:0;margin:0}.fcd>summary h2{display:inline;margin:0}.fcd>summary::before{content:"▸ ";color:var(--muted)}.fcd[open]>summary::before{content:"▾ "}.fcd[open]>summary{margin-bottom:10px}#xs{margin-top:10px}#xs+.inc{margin-top:14px}#xs>summary h2{font-size:.9rem;font-weight:600;color:var(--muted)}
 details details{padding-left:6px}
@@ -239,7 +239,7 @@ body.editing #flL,body.editing #flB{position:static;max-height:none;overflow:vis
 .langm li[aria-selected="true"]{background:#2f3a34}
 .langm li[aria-selected="true"]::after{content:"\2713";margin-left:auto;color:#8fd3a8}
 .brand h1{white-space:nowrap}
-@media (max-width:620px){.hbar .editb span,.hbar .helpb span,.hbar .gear span{display:none}.hbar .editb,.hbar .helpb{padding:6px 5px}.langbtn{padding:6px 4px;gap:4px}.langbtn .chev,.langbtn #langn{display:none}.brand{gap:8px}.brand>svg{width:40px;height:40px}.brand>img{width:64px;height:64px}.hbar{gap:0}.brand h1{font-size:1.3rem}.brand>svg{width:36px;height:36px}}
+@media (max-width:620px){.hbar .editb span,.hbar .helpb span,.hbar .gear span{display:none}.hbar .editb,.hbar .helpb{padding:6px 5px}.langbtn{padding:6px 4px;gap:4px}.langbtn .chev,.langbtn #langn{display:none}.brand{gap:8px}.brand>svg{width:40px;height:40px}.brand>img{width:44px;height:44px;border-radius:9px!important}p.sub{display:none}.hbar{gap:0}.brand h1{font-size:1.3rem}.brand>svg{width:36px;height:36px}}
 /* phones and tablets (the labelled bar needs about 1000px): Language, Help and Profile stay in the bar at finger size;
    Simple, Sections, Edit and Settings move into the ⋯ menu. On the narrowest phones the bar moves under the name rather than pushing the page sideways. */
 @media (max-width:1000px){
@@ -283,6 +283,9 @@ body.editing #colL,body.editing #colR{position:static;max-height:none;overflow:v
 .gear:hover{color:var(--text)}
 .hov{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto}
 .hov[hidden]{display:none}
+/* phones: a large Close at the bottom of Help and Profile, in reach of the thumb (added by app.js) */
+.dlgcls{display:none}
+@media (max-width:620px){.dlgcls{display:block;position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:100%;min-height:48px;margin-top:18px;font-weight:600;background:var(--card);box-shadow:0 -8px 16px var(--card)}}
 .hp{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;width:min(560px,100%);box-shadow:0 16px 48px rgba(0,0,0,.4)}
 .hp h3{margin:16px 0 4px;font-size:.95rem;color:var(--accent)}
 .hp p,.hp li{font-size:.88rem;line-height:1.5;color:var(--text);margin:4px 0}
@@ -684,8 +687,8 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="slot" data-card="add"><div class="ctl" hidden><b>Add expense</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card">
   <form id="f">
-    <input id="amt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
-    <div class="nw" id="nw"><input id="name" placeholder="Name (e.g. Rent, Mobile phone 2)" aria-label="Name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
+    <input id="amt" type="number" inputmode="decimal" enterkeyhint="next" step="0.01" min="0.01" placeholder="Amount" aria-label="Amount" required>
+    <div class="nw" id="nw"><input id="name" autocorrect="off" spellcheck="false" placeholder="Name (e.g. Rent, Mobile phone 2)" aria-label="Name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="acl" aria-autocomplete="list"><ul class="acl" id="acl" role="listbox" hidden></ul></div>
     <select id="freq" aria-label="How often">
       <option value="0">One-time</option>
       <option value="365">Daily</option>
@@ -698,7 +701,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <label class="vyw" id="vyw" hidden><input type="checkbox" id="vy"> <span>The amount changes each time</span></label>
     <div class="dd" id="dd"><input type="hidden" id="cat" value="Housing"><button type="button" class="ddb" id="ddb" aria-haspopup="true" aria-expanded="false"></button><div class="ddm" id="ddm" hidden></div></div>
     <input id="dt" type="date" title="Date (due date for bills)" aria-label="Date" required>
-    <input id="tags" list="taglist" placeholder="Tags (e.g. work, holiday)" maxlength="80" autocomplete="off" aria-label="Tags">
+    <input id="tags" autocapitalize="off" autocorrect="off" spellcheck="false" list="taglist" placeholder="Tags (e.g. work, holiday)" maxlength="80" autocomplete="off" aria-label="Tags">
     <datalist id="taglist"></datalist>
     <div class="rmw" id="rmw" hidden><button type="button" class="nlk" id="rmt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 004 0"/></svg> Set a reminder</button><span class="rmi" id="rmi" hidden></span>
       <span class="rmf" id="rmf" hidden><label><span>Repeats</span><select id="rmr"><option value="once">One time</option><option value="d">Every day</option><option value="w">Every week</option><option value="2w">Every 2 weeks</option><option value="m" selected>Every month</option><option value="2m">Every 2 months</option><option value="3m">Every 3 months</option><option value="6m">Every 6 months</option><option value="y">Every year</option></select></label><label><span>Next reminder</span><input id="rmd" type="date"></label><button type="button" class="ghost" id="rmx" aria-label="No reminder" title="No reminder">✕</button></span></div>
@@ -716,7 +719,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Expenses</h2>
     <div><select class="ordsel" aria-label="Sort order"><option value="new">Newest first</option><option value="old">Oldest first</option></select> <select id="cur" aria-label="Currency"><option>€</option><option>$</option><option>£</option></select>
     <button class="ghost adv" id="clear" type="button">Clear all</button></div></div>
-  <div class="srch"><input id="q" type="search" placeholder="Search name, category or #tag" aria-label="Search expenses" autocomplete="off"></div>
+  <div class="srch"><input id="q" type="search" enterkeyhint="search" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Search name, category or #tag" aria-label="Search expenses" autocomplete="off"></div>
   <div class="chips tagbar" id="tagbar"></div>
   <div class="hint" id="qsum" hidden></div>
   <div class="chips" id="yrs"></div>
@@ -752,7 +755,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <div class="head"><h2>Categories &amp; bills</h2><div><button type="button" class="ghost" id="cadd" aria-controls="cmp">Edit / Add Categories</button> <button type="button" class="ghost" id="mrt">Merchants</button></div></div>
   <div id="mrp" hidden>
     <p class="hint" id="mrh"></p>
-    <input id="mrq" type="search" autocomplete="off" aria-label="Merchants" style="width:100%;box-sizing:border-box;margin-top:8px">
+    <input id="mrq" type="search" enterkeyhint="search" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Merchants" style="width:100%;box-sizing:border-box;margin-top:8px">
     <div id="mrl"></div>
     <div class="data" style="margin-top:10px"><button type="button" id="mrscan"></button></div>
     <div class="mrs" id="mrs" hidden></div>
@@ -832,7 +835,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="slot" data-card="flcc"><div class="ctl" hidden><b>Clients</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card adv" id="flcc">
   <div class="head"><h2>Clients</h2></div>
-  <form id="flclf" class="clf"><input id="flcln" placeholder="Client name" maxlength="60" aria-label="Client name"><button class="primary" type="submit" id="flclb">Add client</button><button class="ghost" type="button" id="flclc" hidden>Cancel</button></form>
+  <form id="flclf" class="clf"><input id="flcln" autocorrect="off" spellcheck="false" placeholder="Client name" maxlength="60" aria-label="Client name"><button class="primary" type="submit" id="flclb">Add client</button><button class="ghost" type="button" id="flclc" hidden>Cancel</button></form>
   <div id="flcll"></div>
 </div>
 </div>
@@ -873,7 +876,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
       <select id="flvr" aria-label="VAT rate"><option value="24">VAT 24%</option><option value="13">VAT 13%</option><option value="6">VAT 6%</option><option value="0">No VAT (0%)</option></select>
     </div>
     <div class="w vpv" id="flvp" hidden></div>
-    <input id="flcli" class="w" list="flclients" placeholder="Client (optional)" maxlength="60" autocomplete="off" aria-label="Client">
+    <input id="flcli" autocorrect="off" spellcheck="false" class="w" list="flclients" placeholder="Client (optional)" maxlength="60" autocomplete="off" aria-label="Client">
     <datalist id="flclients"></datalist>
     <input id="fln" class="w" placeholder="Description (optional)" maxlength="60">
     <select id="flc" class="w" aria-label="Category"></select>
