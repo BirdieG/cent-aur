@@ -9,7 +9,7 @@
  * back after every change. The first start creates the user "admin" with password "admin";
  * that password must be changed at the first sign-in.
  */
-$VERSION = '2.0.2';
+$VERSION = '2.0.3';
 $CFG = array(
     'data_dir'        => '',   // empty = a folder "cent-aur-data" next to the website folder (outside the web)
     'ip_header'       => '',   // 'HTTP_CF_CONNECTING_IP' when the Cloudflare orange cloud is on

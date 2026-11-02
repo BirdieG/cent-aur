@@ -85,6 +85,7 @@ button.ed2{background:none;border:none;color:var(--muted);padding:4px 8px;font-s
 #cats .bar{margin-top:8px}
 .head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .head h2{font-size:1.05rem;margin:0}
+.head .hbtn{display:flex;flex-wrap:wrap;gap:8px}
 .empty{color:var(--muted);padding:8px 0}
 .inc{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .inc+.inc{margin-top:8px}
@@ -752,7 +753,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 <div class="col" id="colR">
 <div class="slot" data-card="side"><div class="ctl" hidden><b>Categories &amp; bills</b><span class="cb"><button type="button" data-mv="u" aria-label="Move up">▲</button><button type="button" data-mv="d" aria-label="Move down">▼</button><button type="button" data-mv="l" aria-label="Move left">◀</button><button type="button" data-mv="r" aria-label="Move right">▶</button></span></div>
 <div class="card side">
-  <div class="head"><h2>Categories &amp; bills</h2><div><button type="button" class="ghost" id="cadd" aria-controls="cmp">Edit / Add Categories</button> <button type="button" class="ghost" id="mrt">Merchants</button></div></div>
+  <div class="head"><h2>Categories &amp; bills</h2><div class="hbtn"><button type="button" class="ghost" id="cadd" aria-controls="cmp">Edit / Add Categories</button> <button type="button" class="ghost" id="mrt">Merchants</button></div></div>
   <div id="mrp" hidden>
     <p class="hint" id="mrh"></p>
     <input id="mrq" type="search" enterkeyhint="search" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" aria-label="Merchants" style="width:100%;box-sizing:border-box;margin-top:8px">
