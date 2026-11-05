@@ -104,7 +104,7 @@ Copy `config.sample.php` to `config.php` (it is never served to visitors) to set
 | Setting           | What it does |
 |-------------------|--------------|
 | `ip_header`       | Header with the visitor's real address behind a proxy, e.g. `HTTP_CF_CONNECTING_IP` |
-| `trusted_proxies` | Addresses allowed to set that header (default: Cloudflare's published ranges) |
+| `trusted_proxies` | Addresses allowed to set that header and `X-Forwarded-Proto` (default: Cloudflare's published ranges). Set it if another proxy handles HTTPS for you, or sign-ins won't be marked secure |
 | `data_dir`        | Where the database lives (default: `cent-aur-data` next to the website folder) |
 | `session_days`    | How long a sign-in lasts without being used (default: 90) |
 

@@ -312,7 +312,7 @@ function normLearn(l){var out={},ks;if(!l||typeof l!=="object"||Array.isArray(l)
   ks.forEach(function(k){var v=l[k];if(k.length>=2&&k.length<=60&&v&&typeof v.c==="string"&&v.c.length<=40)out[k]={c:v.c}});return out}
 function normGoals(a){return (Array.isArray(a)?a:[]).filter(function(g){return g&&typeof g==="object"&&+g.target>0}).slice(0,200).map(function(g){return {id:g.id||nid(),name:String(g.name||"").trim().slice(0,60)||"Goal",target:+g.target,saved:(+g.saved>0?+g.saved:0),by:/^\d{4}-\d{2}$/.test(g.by||"")?g.by:""}})}
 function norm(d){var t=today(),y=t.slice(0,4);
-  var th=d.theme&&typeof d.theme==="object"?d.theme:{};d.theme={pal:PAL[th.pal]?th.pal:"green",mode:({auto:1,light:1,dark:1})[th.mode]?th.mode:"auto"};d.minTray=!!d.minTray;d.autoUpdate=d.autoUpdate!==false;d.flLayout=d.flLayout&&typeof d.flLayout==="object"?normFl(d.flLayout):null;d.trend=d.trend==="bar"?"bar":"line";var sh={};if(d.show&&typeof d.show==="object")VIEWS.forEach(function(k){var v=d.show[k],def=HIDEDEF.indexOf(k)<0;if(v===!def)sh[k]=v});d.show=sh;d.lang=(d.lang==="el"||d.lang==="en")?d.lang:null;d.order=d.order==="old"?"old":"new";d.fullLists=!!d.fullLists;var cl=d.collapsed&&typeof d.collapsed==="object"?d.collapsed:{};d.collapsed={};["savings","extra","insights","goals"].forEach(function(k){if(cl[k]===true)d.collapsed[k]=true});d.collapsed.fcd=cl.fcd!==false;d.collapsed.xs=cl.xs!==false;d.goals=normGoals(d.goals);
+  var th=d.theme&&typeof d.theme==="object"?d.theme:{};d.theme={pal:PAL[th.pal]?th.pal:"green",mode:({auto:1,light:1,dark:1})[th.mode]?th.mode:"auto"};d.minTray=!!d.minTray;d.autoUpdate=d.autoUpdate!==false;d.flLayout=d.flLayout&&typeof d.flLayout==="object"?normFl(d.flLayout):null;d.trend=d.trend==="bar"?"bar":"line";var sh={};if(d.show&&typeof d.show==="object")VIEWS.forEach(function(k){var v=d.show[k],def=HIDEDEF.indexOf(k)<0;if(v===!def)sh[k]=v});d.show=sh;d.lang=(d.lang==="el"||d.lang==="en")?d.lang:null;d.order=d.order==="old"?"old":"new";d.fullLists=!!d.fullLists;var cl=d.collapsed&&typeof d.collapsed==="object"?d.collapsed:{};d.collapsed={};["savings","extra","insights","goals","trend"].forEach(function(k){if(cl[k]===true)d.collapsed[k]=true});d.collapsed.fcd=cl.fcd!==false;d.collapsed.xs=cl.xs!==false;d.goals=normGoals(d.goals);
   if(!Array.isArray(d.cats)||!d.cats.length)d.cats=defaultCats();
   var hadGroup=d.cats.some(function(c){return "group" in c});
   d.cats.forEach(function(c){if(!("group" in c))c.group=(!hadGroup&&["Water","Electricity","Internet"].indexOf(c.name)>=0)?"Utilities":"";c.group=typeof c.group==="string"?c.group.trim().slice(0,40):"";if(!ICONS[c.icon])c.icon="grid";c.bill=!!c.bill;delete c.dueDay;delete c.every;if(!c.since)c.since=t.slice(0,7)});
@@ -616,7 +616,7 @@ $("rmr").addEventListener("change",function(){if(!remTouched)syncRem()});
 $("rmd").addEventListener("input",function(){remTouched=true});
 $("dt").addEventListener("change",syncRem);
 $("name").addEventListener("input",syncRem);
-function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span><span aria-hidden="true">▾</span>';$("ddb").setAttribute("aria-label","Category: "+v);applyCatRules();updateLP()}
+function syncCat(){var v=$("cat").value;$("ddb").innerHTML=ic(v)+'<span class="dl">'+esc(v)+'</span>';$("ddb").setAttribute("aria-label","Category: "+v);applyCatRules();updateLP()}
 function stopEdit(){editing=null;catTouched=false;freqTouched=false;exactKey=null;showSug(null);acHide();$("sb").textContent="Add";$("cc").hidden=true;$("name").value="";delete $("name").dataset.auto;$("amt").value="";$("tags").value="";showNote("");$("endm").value="";$("vy").checked=false;$("dt").value=today();remOpen(false);applyCatRules();updateLP()}
 function startEdit(id){var it=find(id);if(!it)return;editing=id;freqTouched=true;
   $("cat").value=it.cat;syncCat();
@@ -677,7 +677,7 @@ $("cc").addEventListener("click",stopEdit);
 $("amt").addEventListener("input",updateLP);
 $("name").addEventListener("input",function(){delete this.dataset.auto});
 function buildMenu(){$("ddm").innerHTML=state.cats.map(function(c,i){return '<button type="button" data-i="'+i+'">'+ic(c.name)+'<span>'+esc(c.name)+'</span></button>'}).join("")}
-$("ddb").addEventListener("click",function(){$("ddm").hidden=!$("ddm").hidden});
+$("ddb").addEventListener("click",function(){var m=$("ddm");m.hidden=!m.hidden;if(!m.hidden)Array.prototype.forEach.call(m.children,function(b){var c=state.cats[+b.dataset.i];b.classList.toggle("sel",!!c&&c.name===$("cat").value)})});
 $("ddm").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var c=state.cats[+b.dataset.i];if(!c)return;$("cat").value=c.name;syncCat();this.hidden=true;catTouched=true;showSug(null);
   var nm=$("name");if(c.bill&&(!nm.value||nm.dataset.auto)){nm.value=c.name;nm.dataset.auto="1"}else if(nm.dataset.auto){nm.value="";delete nm.dataset.auto}});
 document.addEventListener("click",function(e){
@@ -721,12 +721,12 @@ $("amt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposi
 $("clear").addEventListener("click",function(){if(state.items.length)ask((state.items.length===1?X("Delete your only expense?","Να διαγραφεί το μοναδικό σας έξοδο;"):
   X("Delete all "+state.items.length+" expenses, from every month and year?","Να διαγραφούν και τα "+state.items.length+" έξοδα, από όλους τους μήνες και τα έτη;"))+" "+
   X("Your budget, savings and categories stay.","Ο προϋπολογισμός, οι αποταμιεύσεις και οι κατηγορίες μένουν."),function(){
-  var prev=state.items;state.items=[];stopEdit();save();render();
+  var prev=state.items,prevR=state.rems.filter(function(r){return r.item});state.items=[];state.rems=state.rems.filter(function(r){return !r.item});stopEdit();save();render();
   // the same way back as after deleting one expense: an Undo button for a few seconds
   var t=$("toast");if(!t)return;
   t.innerHTML='<span>'+esc(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"))+'</span><button type="button" id="toastu">'+X("Undo","Αναίρεση")+'</button>';t.hidden=false;announce(X("All expenses deleted","Όλα τα έξοδα διαγράφηκαν"));
   clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},8000);
-  $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);if(!state.items.length)state.items=prev;else state.items=prev.concat(state.items);save();render()})},{ok:"Delete all",danger:true})});
+  $("toastu").addEventListener("click",function(){t.hidden=true;clearTimeout(toastT);if(!state.items.length)state.items=prev;else state.items=prev.concat(state.items);state.rems=state.rems.concat(prevR);save();render()})},{ok:"Delete all",danger:true})});
 function dlBlob(name,blob){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}
 function saveAs(name,blob,desc,mime,ext){
   if(typeof window.showSaveFilePicker!=="function"){dlBlob(name,blob);return Promise.resolve(true)}
@@ -762,7 +762,7 @@ function saveCat(force){
   for(var j=0;j<state.cats.length;j++)if(j!==ci&&state.cats[j].name.toLowerCase()===n.toLowerCase()){alert("A category with that name already exists.");return}
   var old=ci>=0?state.cats[ci]:null,bill=$("cb").checked;
   var cfg={name:n,icon:selIcon,group:$("cg").value.trim().slice(0,40),bill:bill,since:old&&old.bill===bill?old.since:today().slice(0,7)};
-  if(old&&old.name!==n){state.items.forEach(function(it){if(it.cat===old.name)it.cat=n});state.rems.forEach(function(r){if(r.cat===old.name){if(r.name===old.name)r.name=n;r.cat=n}});if($("cat").value===old.name)$("cat").value=n}
+  if(old&&old.name!==n){state.items.forEach(function(it){if(it.cat===old.name)it.cat=n});state.rems.forEach(function(r){if(r.cat===old.name){if(r.name===old.name)r.name=n;r.cat=n}});Object.keys(state.learn).forEach(function(k){if(state.learn[k].c===old.name)state.learn[k].c=n});mCustomKeys().forEach(function(k){if(state.mer[k].c===old.name)state.mer[k].c=n});mClear();if($("cat").value===old.name)$("cat").value=n}
   if(old)state.cats[ci]=cfg;else state.cats.push(cfg);
   $("cf").hidden=true;ci=null;buildMenu();renderCats();syncCat();save();render()}
 function delCat(i){var c=state.cats[i];if(!c)return;
@@ -1093,7 +1093,7 @@ function mAcc(n){return EL_M[EN_M.indexOf(n)].slice(0,-1)}
 function plu(n,a,b){return +n===1?a:b}
 var A="(\\S+[ \\u00a0]-?[\\d.,]+)";
 var DICT={"Data folder":"Φάκελος δεδομένων","Change…":"Αλλαγή…","Use the standard folder":"Χρήση του βασικού φακέλου","Where this PC keeps your offline data and the app’s settings. Changing it moves them there.":"Πού κρατά αυτός ο υπολογιστής τα δεδομένα εκτός σύνδεσης και τις ρυθμίσεις της εφαρμογής. Αν τον αλλάξετε, μεταφέρονται εκεί.","Enter the full path of a folder, for example D:\\Cent-aur":"Βάλτε την πλήρη διαδρομή ενός φακέλου, για παράδειγμα D:\\Cent-aur","Cent-aur cannot save files in that folder.":"Το Cent-aur δεν μπορεί να αποθηκεύσει αρχεία σε αυτόν τον φάκελο.","Your data could not be moved there. Nothing was changed.":"Δεν ήταν δυνατή η μεταφορά των δεδομένων σας εκεί. Τίποτα δεν άλλαξε.","The server could not be reached. Check the address and your connection.": "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε τη διεύθυνση και τη σύνδεσή σας.", "That address answered, but it is not a Cent-aur server.": "Αυτή η διεύθυνση απάντησε, αλλά δεν είναι διακομιστής Cent-aur.", "Enter the server address, for example https://cent-aur.example.com": "Βάλτε τη διεύθυνση του διακομιστή, για παράδειγμα https://cent-aur.example.com", "This is not available while working offline.": "Αυτό δεν είναι διαθέσιμο όταν δουλεύετε εκτός σύνδεσης.", "Could not change the start-with-Windows setting.": "Δεν ήταν δυνατή η αλλαγή της εκκίνησης με τα Windows.", "Start with Windows": "Εκκίνηση με τα Windows", "Opens Cent-aur when you sign in to Windows.": "Ανοίγει το Cent-aur όταν συνδέεστε στα Windows.","Choose a password that is harder to guess.":"Επιλέξτε έναν κωδικό που μαντεύεται πιο δύσκολα.","Your data is too large to save.":"Τα δεδομένα σας είναι πολύ μεγάλα για να αποθηκευτούν.",
-"Wrong user name or password.":"Λάθος όνομα χρήστη ή κωδικός.","Too many wrong tries. Wait 10 minutes and try again.":"Πάρα πολλές λάθος προσπάθειες. Περιμένετε 10 λεπτά και δοκιμάστε ξανά.","Please sign in.":"Παρακαλώ συνδεθείτε.","The current password is not right.":"Ο τρέχων κωδικός δεν είναι σωστός.","The password must be at least 8 characters.":"Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.","The password is too long.":"Ο κωδικός είναι πολύ μεγάλος.","That user name is already taken.":"Αυτό το όνομα χρήστη χρησιμοποιείται ήδη.","The user name must be 2-40 letters, numbers or . _ - @":"Το όνομα χρήστη πρέπει να έχει 2-40 γράμματα, αριθμούς ή . _ - @","There must always be one active administrator.":"Πρέπει να υπάρχει πάντα ένας ενεργός διαχειριστής.","You can't delete your own account while signed in.":"Δεν μπορείτε να διαγράψετε τον λογαριασμό σας ενώ είστε συνδεδεμένοι.","Only the administrator can do that.":"Μόνο ο διαχειριστής μπορεί να το κάνει αυτό.","No such user.":"Δεν υπάρχει τέτοιος χρήστης.","Enter your user name and password.":"Βάλτε όνομα χρήστη και κωδικό.","Something went wrong on the server.":"Κάτι πήγε στραβά στον διακομιστή.","Blocked: wrong origin.":"Αποκλείστηκε: λάθος προέλευση.",
+"Wrong user name or password.":"Λάθος όνομα χρήστη ή κωδικός.","Too many wrong tries. Wait 10 minutes and try again.":"Πάρα πολλές λάθος προσπάθειες. Περιμένετε 10 λεπτά και δοκιμάστε ξανά.","Please sign in.":"Παρακαλώ συνδεθείτε.","The current password is not right.":"Ο τρέχων κωδικός δεν είναι σωστός.","The password must be at least 8 characters.":"Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.","The password is too long.":"Ο κωδικός είναι πολύ μεγάλος.","That user name is already taken.":"Αυτό το όνομα χρήστη χρησιμοποιείται ήδη.","The user name must be 2-40 letters, numbers or . _ - @":"Το όνομα χρήστη πρέπει να έχει 2-40 γράμματα, αριθμούς ή . _ - @","There must always be one active administrator.":"Πρέπει να υπάρχει πάντα ένας ενεργός διαχειριστής.","You can't delete your own account while signed in.":"Δεν μπορείτε να διαγράψετε τον λογαριασμό σας ενώ είστε συνδεδεμένοι.","Only the administrator can do that.":"Μόνο ο διαχειριστής μπορεί να το κάνει αυτό.","No such user.":"Δεν υπάρχει τέτοιος χρήστης.","Enter your user name and password.":"Βάλτε όνομα χρήστη και κωδικό.","Something went wrong on the server.":"Κάτι πήγε στραβά στον διακομιστή.","Blocked: wrong origin.":"Αποκλείστηκε: λάθος προέλευση.","Blocked: missing header.":"Αποκλείστηκε: λείπει απαραίτητη κεφαλίδα.","Please choose a new password first.":"Επιλέξτε πρώτα νέο κωδικό.","Not found.":"Δεν βρέθηκε.","Not allowed.":"Δεν επιτρέπεται.","Bad request.":"Μη έγκυρο αίτημα.","Your data was changed on another device.":"Τα δεδομένα σας άλλαξαν σε άλλη συσκευή.","The cent-aur-data folder is from the older version of Cent-aur. Delete that folder and open the site again.":"Ο φάκελος cent-aur-data είναι από την παλαιότερη έκδοση του Cent-aur. Διαγράψτε τον και ανοίξτε ξανά τον ιστότοπο.","That folder already has Cent-aur data.":"Αυτός ο φάκελος έχει ήδη δεδομένα Cent-aur.","Something went wrong on this PC.":"Κάτι πήγε στραβά σε αυτόν τον υπολογιστή.",
 "Reset layout":"Επαναφορά διάταξης","Simple":"Απλή","Full view":"Πλήρης προβολή","Edit":"Επεξεργασία","Done":"Τέλος","Help":"Βοήθεια","More":"Περισσότερα","Options":"Ρυθμίσεις","Settings":"Ρυθμίσεις","Profile":"Προφίλ","Close profile":"Κλείσιμο προφίλ","Language":"Γλώσσα",
 "Switch between the full and the simplified view":"Εναλλαγή μεταξύ πλήρους και απλής προβολής","Edit layout":"Επεξεργασία διάταξης",
 "Close options":"Κλείσιμο ρυθμίσεων","Close settings":"Κλείσιμο ρυθμίσεων","Close help":"Κλείσιμο βοήθειας","Close calculator":"Κλείσιμο αριθμομηχανής",
@@ -1199,6 +1199,7 @@ R("^(\\d+(?:\\.\\d+)?)% of the monthly budget used$",function(m){return "Χρη�
 R("^(\\d+(?:\\.\\d+)?)% of the yearly budget planned \\((\\d{4})\\)$",function(m){return "Προγραμματίστηκε το "+m[1]+"% του ετήσιου προϋπολογισμού ("+m[2]+")"});
 R("^"+A+" left$",function(m){return m[1]+" απομένουν"});
 R("^"+A+" over budget$",function(m){return m[1]+" πάνω από τον προϋπολογισμό"});
+R("^The data folder cannot be created or written: (.+)\\. Create it in File Manager \\(or set data_dir in config\\.php\\)\\.$",function(m){return "Ο φάκελος δεδομένων δεν μπορεί να δημιουργηθεί ή να γραφτεί: "+m[1]+". Δημιουργήστε τον από τη Διαχείριση αρχείων (ή ορίστε το data_dir στο config.php)."});
 R("^Category: (.+)$",function(m){return "Κατηγορία: "+trCat(m[1])});
 R("^"+A+" not yet planned$",function(m){return m[1]+" δεν έχουν προγραμματιστεί ακόμα"});
 R("^Moved (\\d+) expenses?$",function(m){return "Μετακινήθηκαν "+m[1]+" "+plu(m[1],"έξοδο","έξοδα")});
@@ -1407,7 +1408,7 @@ function accFail(e){
 function accSignedOut(msg){ACC.user=null;$("pfov").hidden=true;ACC.loaded=ACC.dirty=false;ACC.err="";accUI();accStatusUI();applyData(JSON.parse(STATE0));$("usrm").hidden=true;accLogin(msg)}
 // pick up changes made on another device (not while something is being typed here: loading would clear it)
 function accRefresh(){var a=document.activeElement,typing=a&&/^(INPUT|TEXTAREA)$/.test(a.tagName)&&a.value!=="";
-  if(!ACC.loaded||ACC.dirty||ACC.saving||st||document.hidden||editing||typing||!$("fmm").hidden)return;
+  if(!ACC.loaded||ACC.dirty||ACC.saving||st||document.hidden||editing||typing||!$("fmm").hidden||document.querySelector(".slm"))return;
   api("/api/data?rev="+ACC.rev).then(function(j){if(j.same||ACC.dirty||ACC.saving||st)return;ACC.rev=j.rev;if(j.data)applyData(j.data)},function(e){if(e&&(e.status===401||e.status===403))accFail(e)})}
 document.addEventListener("visibilitychange",function(){if(!document.hidden){accFlush();accRefresh()}});
 window.addEventListener("online",function(){accFlush();accRefresh()});
@@ -1599,6 +1600,10 @@ function renderSearch(){
 /* ---- recurring expenses: pause / resume / end ---- */
 function syncEnd(){var f=+$("freq").value;$("vyw").hidden=f===0||!!editing;$("endw").hidden=f===0}
 $("freq").addEventListener("change",function(){freqTouched=true;syncEnd();syncRem()});
+// the Category list: arrow keys move through it, Escape closes it and returns to its button
+$("dd").addEventListener("keydown",function(e){var m=$("ddm");if(m.hidden)return;var l=Array.prototype.slice.call(m.querySelectorAll("button")),i=l.indexOf(document.activeElement);
+  if(e.key==="Escape"){e.stopPropagation();m.hidden=true;$("ddb").focus()}
+  else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();var n=l[e.key==="ArrowDown"?Math.min(i+1,l.length-1):Math.max(i-1,0)];if(n)n.focus()}});
 $("vy").addEventListener("change",function(){syncEnd();syncRem()});
 function renderRec(){
   var ci=idxOf(today()),all=LS().items.filter(function(it){return it.freq!==0}),np=0;
@@ -1916,14 +1921,17 @@ function mergeData(d){
   if(o.budgets&&typeof o.budgets==="object")Object.keys(o.budgets).forEach(function(k){if(!(k in state.budgets))state.budgets[k]=o.budgets[k]});
   if(o.mer)Object.keys(o.mer).forEach(function(k){if(!(k in state.mer)&&Object.keys(state.mer).length<300)state.mer[k]=o.mer[k]});
   if(o.learn)Object.keys(o.learn).forEach(function(k){if(!(k in state.learn))state.learn[k]=o.learn[k]});mClear();
-  return {items:n,extra:ex,goals:go,fl:fl}}
+  // a reminder is new if neither its id nor (for a bill) its name is here; one tied to an expense needs that expense here
+  var rm=0;o.rems.forEach(function(r){if(state.rems.length>=300||state.rems.some(function(x){return x.id===r.id}))return;if(r.item?!find(r.item):remsOf(r.name).length)return;state.rems.push(r);rm++});
+  if(o.fl&&o.fl.vat)Object.keys(o.fl.vat.paid).forEach(function(k){if(!state.fl.vat.paid[k]){state.fl.vat.paid[k]=true;fl++}});
+  return {items:n,extra:ex,goals:go,fl:fl,rems:rm}}
 $("mg").addEventListener("click",function(){$("mgf").click()});
 $("mgf").addEventListener("change",function(){
   var f=this.files[0];this.value="";if(!f)return;
   f.text().then(function(t){var r;try{r=mergeData(JSON.parse(t))}catch(e){r=null}
     if(!r){alert("That file isn’t a Cent-aur backup.");return}
-    var tot=r.items+r.extra+r.goals+r.fl;
-    if(tot){save();applyData(state);setTimeout(function(){say("Merged "+r.items+(r.items===1?" expense, ":" expenses, ")+(r.extra+r.goals+r.fl)+((r.extra+r.goals+r.fl)===1?" other entry":" other entries"))},400)}
+    var more=r.extra+r.goals+r.fl+r.rems,tot=r.items+more;
+    if(tot){save();applyData(state);setTimeout(function(){say("Merged "+r.items+(r.items===1?" expense, ":" expenses, ")+more+(more===1?" other entry":" other entries"))},400)}
     else say("Nothing new to merge")})});
 
 /* ---- Profile → Reminders ---- */
@@ -2237,6 +2245,37 @@ accBoot();
   window.addEventListener("scroll",later,{passive:true});window.addEventListener("resize",later);
   if(window.ResizeObserver){var ro=new ResizeObserver(later);els().forEach(function(el){ro.observe(el)})}
   update()})();
+// dropdowns: the browser's own list of options cannot be styled (some systems draw it translucent and blurred), so it is drawn here.
+// The <select> stays the real control: it holds the value, sends the change events and takes keyboard focus. On touch screens CSS lets taps pass through it.
+(function(){var pn=null,sel=null,cur=-1,at=0,buf="",bt=0,fine=!window.matchMedia||matchMedia("(pointer:fine)").matches;
+  function items(){return [].slice.call(pn.children)}
+  function usable(){return items().filter(function(li){return li.getAttribute("aria-disabled")!=="true"})}
+  function act(li){if(cur>=0&&items()[cur])items()[cur].classList.remove("act");cur=items().indexOf(li);if(!li)return;li.classList.add("act");pn.setAttribute("aria-activedescendant",li.id);li.scrollIntoView({block:"nearest"})}
+  function close(back){if(!pn)return;var s=sel;pn.remove();pn=sel=null;cur=-1;s.classList.remove("slo");if(back&&fine)s.focus()}
+  function pick(li){var s=sel,i=+li.getAttribute("data-i");if(i!==s.selectedIndex){s.selectedIndex=i;s.dispatchEvent(new Event("input",{bubbles:true}));s.dispatchEvent(new Event("change",{bubbles:true}))}close(true)}
+  function move(d){var u=usable(),i=u.indexOf(items()[cur]);if(u.length)act(u[Math.max(0,Math.min(u.length-1,i+d))])}
+  function open(s){sel=s;s.classList.add("slo");pn=document.createElement("ul");pn.className="slm";pn.tabIndex=-1;pn.setAttribute("role","listbox");pn.setAttribute("data-notr","");
+    var lb=s.getAttribute("aria-label");if(lb)pn.setAttribute("aria-label",lb);
+    [].forEach.call(s.options,function(o,i){if(o.hidden)return;var li=document.createElement("li");li.id="slo"+i;li.setAttribute("role","option");li.setAttribute("data-i",i);li.setAttribute("aria-selected",String(o.selected));if(o.disabled)li.setAttribute("aria-disabled","true");li.textContent=o.textContent;pn.appendChild(li)});
+    ["pointerdown","mousedown","click"].forEach(function(t){pn.addEventListener(t,function(e){e.stopPropagation()})});
+    pn.addEventListener("click",function(e){var li=e.target.closest("li");if(li&&li.getAttribute("aria-disabled")!=="true")pick(li)});
+    pn.addEventListener("mousemove",function(e){var li=e.target.closest("li");if(li&&li.getAttribute("aria-disabled")!=="true"&&items()[cur]!==li)act(li)});
+    pn.addEventListener("keydown",key);document.body.appendChild(pn);
+    var r=s.getBoundingClientRect(),m=8,gap=4,below=innerHeight-r.bottom-gap-m,above=r.top-gap-m;pn.style.minWidth=r.width+"px";
+    var h=pn.offsetHeight,up=h>below&&above>below;pn.style.maxHeight=Math.max(120,up?above:below)+"px";
+    pn.style.left=Math.max(m,Math.min(r.left,innerWidth-pn.offsetWidth-m))+"px";pn.style.top=(up?Math.max(m,r.top-gap-pn.offsetHeight):r.bottom+gap)+"px";at=r.top;
+    var on=pn.querySelector('[aria-selected="true"]')||usable()[0];if(on)act(on);pn.focus({preventScroll:true})}
+  function key(e){var k=e.key;e.stopPropagation();
+    if(k==="Escape"){e.preventDefault();close(true)}else if(k==="Tab")close(true);
+    else if(k==="ArrowDown"){e.preventDefault();move(1)}else if(k==="ArrowUp"){e.preventDefault();move(-1)}
+    else if(k==="Home"){e.preventDefault();move(-1e4)}else if(k==="End"){e.preventDefault();move(1e4)}
+    else if(k==="Enter"||k===" "&&!buf){e.preventDefault();if(items()[cur])pick(items()[cur])}
+    else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();var t=Date.now();buf=t-bt>700?k:buf+k;bt=t;var q=buf.toLocaleLowerCase();usable().some(function(li){if(li.textContent.trim().toLocaleLowerCase().indexOf(q)===0){act(li);return true}});setTimeout(function(){if(Date.now()-bt>=700)buf=""},750)}}
+  function under(x,y){var top=document.elementFromPoint(x,y),hit=null;if(!top)return null;[].forEach.call(document.querySelectorAll("select"),function(s){if(s.disabled||!top.contains(s))return;var r=s.getBoundingClientRect();if(r.width&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)hit=s});return hit}
+  document.addEventListener("mousedown",function(e){if(e.target.tagName==="SELECT")e.preventDefault()},true);
+  document.addEventListener("click",function(e){if(pn&&pn.contains(e.target))return;var s=e.target.tagName==="SELECT"?e.target:under(e.clientX,e.clientY),was=sel;close(false);if(s){e.preventDefault();if(s!==was&&!s.disabled){if(fine)s.focus({preventScroll:true});open(s)}}},true);
+  document.addEventListener("keydown",function(e){if(pn||e.target.tagName!=="SELECT"||e.ctrlKey||e.metaKey)return;if(["Enter"," ","ArrowDown","ArrowUp"].indexOf(e.key)>=0){e.preventDefault();e.stopPropagation();open(e.target)}},true);
+  window.addEventListener("scroll",function(e){if(pn&&e.target!==pn&&Math.abs(sel.getBoundingClientRect().top-at)>4)close(false)},true);window.addEventListener("resize",function(){close(false)})})();
 // Cloudflare's bot check adds a hidden, untitled frame after this script; name it so screen readers and checkers know what it is
 document.addEventListener("DOMContentLoaded",function(){[].forEach.call(document.querySelectorAll("body>iframe:not([title])"),function(f){f.title="Cloudflare security check";f.setAttribute("aria-hidden","true");f.tabIndex=-1})});
 })();

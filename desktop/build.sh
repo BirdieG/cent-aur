@@ -1,19 +1,20 @@
 #!/bin/sh
 # Builds Cent-aur.exe for 64-bit Windows, using Docker (nothing is installed on this computer).
 #
-#   sh desktop/build.sh https://cent-aur.example.com      ->  desktop/dist/Cent-aur.exe
+#   sh desktop/build.sh      ->  desktop/dist/Cent-aur.exe
 #
-# The address is the server the sign-in form offers; people can change it there.
+# The sign-in form offers https://cent-aur.com/; people can change it there. To build for another
+# server, give its address: sh desktop/build.sh https://cent-aur.example.com
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
-server=${1:-}
-version=2.0.3
+server=${1:-https://cent-aur.com/}
+version=2.0.4
 
 # The program serves the page from inside itself: copy it from public/ (api.php stays out).
 rm -rf "$here/web"
 mkdir -p "$here/web"
-for f in index.html app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$here/web/"; done
+for f in index.html boot.js app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$here/web/"; done
 
 docker volume create centaur-go-cache >/dev/null
 docker run --rm -v "$root:/src" -v centaur-go-cache:/go -w /src/desktop \

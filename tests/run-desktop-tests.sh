@@ -22,7 +22,7 @@ docker cp "$root/public/." "$net-web:/var/www/html/"
 
 # the desktop app, with the page copied in as build.sh does
 rm -rf "$root/desktop/web" && mkdir -p "$root/desktop/web"
-for f in index.html app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$root/desktop/web/"; done
+for f in index.html boot.js app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$root/desktop/web/"; done
 docker volume create centaur-go-cache >/dev/null
 docker run --rm -v "$root:/src" -v centaur-go-cache:/go -w /src/desktop -e OWNER="$(id -u):$(id -g)" golang:1.26 sh -c "
   CGO_ENABLED=0 go build -buildvcs=false -ldflags '-X main.defaultServer=http://$net-web' -o dist/cent-aur-test . && chown -R \$OWNER dist web"

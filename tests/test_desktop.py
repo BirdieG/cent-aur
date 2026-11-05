@@ -130,7 +130,7 @@ with sync_playwright() as pw:
         form_title(page, "Choose your password")
         page.fill("#fm_n", "adminpass123"); page.fill("#fm_n2", "adminpass123"); page.click("#fmo")
         page.wait_for_selector("#fmm", state="hidden")
-        page.wait_for_selector("#acw:not([hidden])")
+        page.wait_for_selector("#acw:not([hidden])", state="attached")   # it sits in Profile, which is closed
         check(page.text_content("#act") == "Account", "signed in: the account block is the server account")
         check(SERVER.split("//")[1] in page.text_content("#ach"), "signed in: it names the server")
         check("Offline coffee" not in page.text_content("#sec"), "the server account does not show the offline data")

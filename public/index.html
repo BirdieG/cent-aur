@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cent-aur</title>
-<!-- asks who is signed in, and for their data, while app.js is still loading (one request, not two in a row after it) -->
-<script>(function(){var r=fetch("/api/session?data=1",{headers:{"X-Requested-With":"CentAur"},cache:"no-store",credentials:"same-origin"});r.catch(function(){});window.BOOT=r})()</script>
+<script src="boot.js"></script>
 <meta name="description" content="Cent-aur: a simple family expense tracker. Record expenses and bills, see where the money goes each month, and plan your savings.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="app-icons/apple-touch-icon.png">
@@ -63,6 +62,8 @@ form{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .ddf{display:grid;gap:6px}.ddf code{font-size:.82rem;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}.ddb{display:flex;flex-wrap:wrap;gap:6px}.ddb button{padding:5px 10px;font-size:.85rem}.ddb button[hidden]{display:none}
 input,select,textarea,button{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0}
 button{cursor:pointer}
+/* a long label next to it (Greek runs long) must not squeeze a checkbox away */
+input[type=checkbox]{flex:none}
 button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
 button.ghost{background:none;color:var(--muted)}
 /* a button that deletes data: the danger colour, with the card colour for its text so it reads in light and dark */
@@ -104,7 +105,20 @@ button.ed2{background:none;border:none;color:var(--muted);padding:4px 8px;font-s
 .ddb .dl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ddm{position:absolute;z-index:20;top:100%;left:0;min-width:230px;max-height:340px;overflow:auto;margin-top:4px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .ddm button{display:flex;align-items:center;width:100%;border:none;background:none;text-align:left;padding:5px 8px;border-radius:8px}
-.ddm button:hover{background:var(--bg)}
+.ddm button:hover,.ddm button:focus-visible{background:var(--bg)}
+/* every dropdown looks like the Category picker: the same arrow (drawn in the text colour, so it follows the theme) and pointer */
+select,.dd>.ddb{-webkit-appearance:none;appearance:none;cursor:pointer;padding-right:22px!important;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(-45deg,transparent 50%,currentColor 50%);background-size:5px 5px;background-position:right 13px center,right 8px center;background-repeat:no-repeat;text-overflow:ellipsis}
+select.slo{color:var(--accent);border-color:var(--accent);background-color:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* touch screens: taps pass through a select, so the phone's own picker never opens; app.js finds the select under the tap */
+@media (pointer:coarse){select{pointer-events:none}}
+/* the list of a select (app.js), drawn like the Category list, with the same mark on the current choice */
+.slm{position:fixed;z-index:2000;width:max-content;max-width:calc(100vw - 16px);margin:0;padding:6px;list-style:none;overflow:auto;outline:0;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.slm li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:5px 8px;border-radius:8px;cursor:pointer}
+.slm li.act{background:var(--bg)}.slm li[aria-disabled="true"]{opacity:.5;cursor:default}
+.slm li[aria-selected="true"]::after,.ddm button.sel::after{content:"\2713";margin-left:auto;padding-left:12px;color:var(--accent)}
+@media (pointer:coarse){.slm li{min-height:44px}}
+/* a box with a list of suggestions: no arrow on mouseover (Chrome draws one), the suggestions still come while typing */
+input[list]::-webkit-calendar-picker-indicator{display:none!important}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .chip,.bchip{border-radius:20px;padding:4px 14px}
 .chip.on,.bchip.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
@@ -451,7 +465,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
 @media (max-width:620px){input[type=checkbox],.vyw input{width:20px;height:20px;flex:none}.chip,.bchip,.mc,.tgc{min-height:40px}.nlk{min-height:40px;display:inline-flex;align-items:center}
   summary,.hintd>summary,.mbd summary{min-height:40px;align-items:center}.mbd summary{padding:10px 0}.hintd>summary{display:flex}
   /* iPhone zooms the page into any box with text under 16px */
-  input,select,textarea{font-size:max(1em,16px)}.ordsel,.rq input,.endw input{font-size:16px}
+  .ddm button{min-height:44px}input,select,textarea{font-size:max(1em,16px)}.ordsel,.rq input,.endw input{font-size:16px}
   /* Clear all moves under the list (app.js), away from sort and currency */
   #clear{display:block;margin:14px 0 0 auto}}
 </style>
@@ -525,11 +539,11 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   <h3>4. Bills &amp; reminders</h3>
   <ul>
     <li>When you add an expense in a category marked as a bill (mobile, electricity, water, internet, common charges&hellip;), choose <b>Set a reminder</b>: how often it repeats (one time, every week, every month&hellip;) and when it is next due. Three days before, it shows <b>in red at the top</b> of This month until you pay it. Adding the bill moves the reminder on to its next date by itself. See, change or delete them all in <b>Profile → Reminders</b>.</li>
-    <li>Press <b>Add expense</b> to record the payment, or <b>Remind me later</b> to hide it for a few days.</li>
+    <li>Type how much it was and press <b>Paid</b> to record the payment. <b>More details</b> opens the form instead, and <b>Remind me later</b> hides it for a while. A bill already counted as a repeating expense only needs <b>Paid</b>.</li>
     <li>Bills with changing amounts show the <b>previous payment</b>, so you can see if you pay more or less, and the <b>Bills history</b> lists them all.</li>
   </ul>
   <h3>5. Your own categories</h3>
-  <p>Use <b>Edit / Add Categories</b> in <b>Categories &amp; bills</b> on the right to add, rename or remove categories, pick an icon, mark it as a bill with a due day, and put it in a group (same group = one line in By category).</p>
+  <p>Use <b>Edit / Add Categories</b> in <b>Categories &amp; bills</b> on the right to add, rename or remove categories, pick an icon, mark it as a bill, and put it in a group (same group = one line in By category).</p>
   <h3>Savings goals</h3>
   <p>In <b>Savings goals</b> add something you are saving for, with a target amount and, if you like, a month to reach it. The card shows your progress and how much to put aside each month. Use <b>Add</b> and <b>Take out</b> to update the amount saved. Goals are a separate tracker: they do not change your Savings figures.</p>
   <h3>Simple view and Freelancer</h3>
@@ -578,12 +592,12 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
   </ul>
   <h3>4. Λογαριασμοί &amp; υπενθυμίσεις</h3>
   <ul>
-    <li>Οι κατηγορίες που έχουν οριστεί ως λογαριασμοί (κινητό, ρεύμα, νερό, διαδίκτυο, κοινόχρηστα&hellip;) αρχίζουν να σας υπενθυμίζουν μόνο <b>αφού προσθέσετε την πρώτη τους πληρωμή</b>. Αν η επόμενη δεν πληρωθεί έναν μήνα μετά την ημερομηνία της τελευταίας πληρωμής, εμφανίζεται <b>με κόκκινο στην κορυφή</b> του «Αυτός ο μήνας» μέχρι να την πληρώσετε.</li>
-    <li>Πατήστε <b>Προσθήκη εξόδου</b> για να καταγράψετε την πληρωμή ή <b>Υπενθύμιση αργότερα</b> για να την κρύψετε για λίγες ημέρες.</li>
+    <li>Όταν προσθέτετε έξοδο σε κατηγορία που έχει οριστεί ως λογαριασμός (κινητό, ρεύμα, νερό, διαδίκτυο, κοινόχρηστα&hellip;), επιλέξτε <b>Ορισμός υπενθύμισης</b>: πόσο συχνά επαναλαμβάνεται (μία φορά, κάθε εβδομάδα, κάθε μήνα&hellip;) και πότε λήγει ξανά. Τρεις ημέρες πριν, εμφανίζεται <b>με κόκκινο στην κορυφή</b> του «Αυτός ο μήνας» μέχρι να τον πληρώσετε. Όταν προσθέτετε τον λογαριασμό, η υπενθύμιση μεταφέρεται μόνη της στην επόμενη ημερομηνία. Δείτε, αλλάξτε ή διαγράψτε τις όλες στο <b>Προφίλ → Υπενθυμίσεις</b>.</li>
+    <li>Γράψτε πόσο ήταν και πατήστε <b>Πληρώθηκε</b> για να καταγράψετε την πληρωμή. Το <b>Περισσότερα</b> ανοίγει τη φόρμα και το <b>Υπενθύμιση αργότερα</b> την κρύβει για λίγο. Ένας λογαριασμός που υπολογίζεται ήδη ως επαναλαμβανόμενο έξοδο χρειάζεται μόνο το <b>Πληρώθηκε</b>.</li>
     <li>Οι λογαριασμοί με μεταβαλλόμενα ποσά δείχνουν την <b>προηγούμενη πληρωμή</b>, ώστε να βλέπετε αν πληρώνετε περισσότερα ή λιγότερα, και το <b>Ιστορικό λογαριασμών</b> τους απαριθμεί όλους.</li>
   </ul>
   <h3>5. Οι δικές σας κατηγορίες</h3>
-  <p>Πατήστε <b>Επεξεργασία / Προσθήκη κατηγοριών</b> στο <b>Κατηγορίες &amp; λογαριασμοί</b> στα δεξιά για να προσθέσετε, να μετονομάσετε ή να αφαιρέσετε κατηγορίες, να διαλέξετε εικονίδιο, να τις ορίσετε ως λογαριασμό με ημέρα λήξης και να τις βάλετε σε ομάδα (ίδια ομάδα = μία γραμμή στο Ανά κατηγορία).</p>
+  <p>Πατήστε <b>Επεξεργασία / Προσθήκη κατηγοριών</b> στο <b>Κατηγορίες &amp; λογαριασμοί</b> στα δεξιά για να προσθέσετε, να μετονομάσετε ή να αφαιρέσετε κατηγορίες, να διαλέξετε εικονίδιο, να τις ορίσετε ως λογαριασμό και να τις βάλετε σε ομάδα (ίδια ομάδα = μία γραμμή στο Ανά κατηγορία).</p>
   <h3>Στόχοι αποταμίευσης</h3>
   <p>Στους <b>Στόχους αποταμίευσης</b> προσθέστε κάτι για το οποίο αποταμιεύετε, με ποσό-στόχο και, αν θέλετε, έναν μήνα για να τον πετύχετε. Η κάρτα δείχνει την πρόοδό σας και πόσα να βάζετε στην άκρη κάθε μήνα. Χρησιμοποιήστε τα <b>Προσθήκη</b> και <b>Ανάληψη</b> για να ενημερώσετε το ποσό που έχετε αποταμιεύσει. Οι στόχοι είναι ξεχωριστός πίνακας: δεν αλλάζουν τα ποσά των Αποταμιεύσεών σας.</p>
   <h3>Απλή προβολή και Ελεύθερος επαγγελματίας</h3>
@@ -597,7 +611,7 @@ html:has(#fmm.lock:not([hidden])) main{visibility:hidden}html:has(#fmm.lock:not(
     <li><b>Επεξεργασία</b> (μολύβι, πάνω δεξιά): ξεκλειδώνει τη σελίδα ώστε να την αναδιατάξετε. Σύρετε μια κάρτα από την πράσινη μπάρα της ή χρησιμοποιήστε τα κουμπιά ▲ ▼ ◀ ▶ για να την τοποθετήσετε στην αριστερή, τη μεσαία ή τη δεξιά στήλη. Πατήστε <b>Τέλος</b> για να την κλειδώσετε ξανά· η <b>Επαναφορά διάταξης</b> επαναφέρει την αρχική.</li>
     <li>Το κουμπί <b>Αριθμομηχανή</b>: ανοίγει μια αριθμομηχανή που επιπλέει. Πατήστε το ξανά για μια ακόμη ή χρησιμοποιήστε το <b>Κλείσιμο όλων</b>.</li>
     <li><b>Γρανάζι</b> (Ρυθμίσεις): χρωματικά θέματα και φωτεινή/σκούρα εμφάνιση.</li>
-    <li><b>Γλώσσα</b> (υδρόγειος, πάνω δεξιά): εναλλαγή μεταξύ English και Ελληνικά.</li>
+    <li><b>Γλώσσα</b> (η σημαία, πάνω δεξιά): εναλλαγή μεταξύ English και Ελληνικά.</li>
   </ul>
   <h3>Έξοδα ανά μήνα</h3>
   <p>Η κάρτα <b>Έξοδα ανά μήνα</b> δείχνει ολόκληρη τη χρονιά με μια ματιά: μια γραμμή (ή <b>Μπάρες</b>) για όσα ξοδέψατε κάθε μήνα και μια διακεκομμένη γραμμή για τον προϋπολογισμό σας. Οι μήνες που ξεπερνούν τον προϋπολογισμό γίνονται κόκκινοι· οι μελλοντικοί μήνες είναι πιο αχνοί γιατί περιλαμβάνουν μόνο τα επαναλαμβανόμενα έξοδα. Δείξτε ή πατήστε έναν μήνα για να δείτε το σύνολο, τη διαφορά από τον προηγούμενο μήνα και τις μεγαλύτερες κατηγορίες. Με το &#9664; &#9654; αλλάζετε έτος και με το <b>Εμφάνιση ως πίνακα</b> βλέπετε τα ποσά.</p>

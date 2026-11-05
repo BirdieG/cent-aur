@@ -9,7 +9,7 @@
  * back after every change. The first start creates the user "admin" with password "admin";
  * that password must be changed at the first sign-in.
  */
-$VERSION = '2.0.3';
+$VERSION = '2.0.4';
 $CFG = array(
     'data_dir'        => '',   // empty = a folder "cent-aur-data" next to the website folder (outside the web)
     'ip_header'       => '',   // 'HTTP_CF_CONNECTING_IP' when the Cloudflare orange cloud is on
@@ -33,7 +33,16 @@ $MAX_DOC = 8 * 1024 * 1024;
 // ------------------------------------------------------------------ small helpers
 function now_ms() { return (int)round(microtime(true) * 1000); }
 function is_https() {
-    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    global $CFG, $CLOUDFLARE_IPS;
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') { return true; }
+    if (!isset($_SERVER['HTTP_X_FORWARDED_PROTO']) || $_SERVER['HTTP_X_FORWARDED_PROTO'] !== 'https') { return false; }
+    // like the visitor's address, this header is only believed from the proxy; anyone else could fake it
+    return from_proxy(is_array($CFG['trusted_proxies']) ? $CFG['trusted_proxies'] : $CLOUDFLARE_IPS);
+}
+function from_proxy($ranges) {
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0';
+    foreach ($ranges as $r) { if (ip_in_range($ip, $r)) { return true; } }
+    return false;
 }
 function jout($code, $obj, $cookie = null) {
     http_response_code($code);
@@ -69,10 +78,7 @@ function client_ip() {
     $h = $CFG['ip_header'];
     // the header is only believed when the request really comes from the proxy; anyone else could fake it
     if ($h && !empty($_SERVER[$h])) {
-        $trusted = is_array($CFG['trusted_proxies']) ? $CFG['trusted_proxies'] : $CLOUDFLARE_IPS;
-        foreach ($trusted as $r) {
-            if (ip_in_range($ip, $r)) { $parts = explode(',', $_SERVER[$h]); $ip = trim($parts[0]); break; }
-        }
+        if (from_proxy(is_array($CFG['trusted_proxies']) ? $CFG['trusted_proxies'] : $CLOUDFLARE_IPS)) { $parts = explode(',', $_SERVER[$h]); $ip = trim($parts[0]); }
     }
     return substr($ip, 0, 60);
 }
@@ -400,7 +406,7 @@ try {
     $ip = client_ip();
     $tok = isset($_COOKIE['ca_session']) ? (string)$_COOKIE['ca_session'] : '';
 
-    if ($path === 'health') { jout(200, array('ok' => true, 'version' => $VERSION)); }
+    if ($path === 'health') { jout(200, array('ok' => true)); }
     if ($path === 'session' && $method === 'GET') {
         $u = user_for($tok);
         // ?data=1: the page's first request also brings the data, so the page does not wait for a second one

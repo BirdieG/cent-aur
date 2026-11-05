@@ -36,8 +36,10 @@ is left, and which bills are still to pay?*
 - Duplicate detection before adding an expense that looks like one you already have.
 
 **Bills and reminders**
-- Mark categories as bills (electricity, water, mobile, internet, common charges…). If the next payment
-  is not made a month after the last one, it is shown in red at the top until you pay it.
+- Mark categories as bills (electricity, water, mobile, internet, common charges…) and set a reminder
+  when you add one. Three days before it is due, it shows in red at the top until you pay it, and paying
+  moves it on to its next date. Snooze it, or record the payment right there.
+- For a bill whose amount changes each time, the months ahead show an estimate from your last payments.
 - A bills history that shows whether each bill went up or down.
 
 **Seeing where the money goes**
@@ -110,7 +112,8 @@ The two are kept apart, and you can switch from the account block in **Profile**
 Windows** is in **Settings** (the gear). Starting Cent-aur a second time brings the open window to the
 front.
 
-Build it with Docker (on Linux, macOS or Windows), giving the server the sign-in form should offer:
+Build it with Docker (on Linux, macOS or Windows). The sign-in form offers `https://cent-aur.com/`; to
+build for your own server, give its address:
 
 ```sh
 sh desktop/build.sh https://cent-aur.example.com
@@ -131,6 +134,7 @@ as `api.php`. The window is [WebView2](https://developer.microsoft.com/microsoft
 
 ```
 public/
+├── boot.js               asks for the session and data as early as possible
 ├── index.html            the page: structure, help text (English and Greek) and its look (themes, light/dark, phone layout)
 ├── app.js                the program: plain JavaScript, no framework, no build step
 ├── api.php               the server: accounts and data, stored in SQLite
@@ -171,7 +175,7 @@ All endpoints are under `/api/` and use a session cookie. Requests that change s
 | `DELETE`| `/api/admin/users/{id}` | Delete a user and their data |
 | `POST` | `/api/admin/users/{id}/logout` | Sign a user out everywhere |
 | `GET`  | `/api/admin/backup` | Download the whole database as one SQLite file |
-| `GET`  | `/api/health` | Server version |
+| `GET`  | `/api/health` | Whether the server is up |
 
 ### Security
 

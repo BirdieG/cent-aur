@@ -213,6 +213,67 @@ with sync_playwright() as pw:
     check(A.input_value("#amt") == "15", "amount box ignores e and + (%r)" % A.input_value("#amt"))
     A.fill("#amt", "")
 
+    # ---- every dropdown looks and behaves like the Category picker; the Tags box shows no arrow
+    look = """b => { const s = getComputedStyle(b); return [s.backgroundColor, s.backgroundImage, s.borderColor, s.borderRadius, s.cursor, s.color, s.fontSize, s.height] }"""
+    A.hover("#freq"); hf = A.eval_on_selector("#freq", look)
+    A.hover("#ddb"); hc = A.eval_on_selector("#ddb", look)
+    check(hf == hc, "How often and Category look the same under the mouse (%s, %s)" % (hf, hc))
+    check(A.evaluate("[...document.querySelectorAll('select')].every(s => getComputedStyle(s).appearance === 'none')"), "no select on the page is drawn by the browser")
+    A.click("#ddb"); A.click("#ddm button:has-text('Housing')")
+    fit = A.eval_on_selector("#ddb .dl", "e => [e.scrollWidth, e.clientWidth]")
+    check(fit[0] <= fit[1], "the arrow leaves room for the category's name: Housing is not cut off (%s)" % fit)
+    A.click("#freq")
+    A.wait_for_selector(".slm")
+    check(A.locator(".slm li").count() == 7 and A.get_attribute(".slm li[aria-selected=true]", "data-i") == str(A.evaluate("document.getElementById('freq').selectedIndex")), "How often opens its own list, with the current choice marked")
+    def box_of(sel):
+        return A.eval_on_selector(sel, "e => { const s = getComputedStyle(e); return [s.backgroundColor, s.borderColor, s.borderRadius, s.boxShadow] }")
+    fb = box_of(".slm")
+    A.click("#ddb")
+    check(A.locator(".slm").count() == 0, "opening the Category list closes the other")
+    check(box_of("#ddm") == fb, "both lists are drawn alike (%s, %s)" % (box_of("#ddm"), fb))
+    A.click("#ddb")
+    A.click("#freq")
+    A.click("#freq")
+    check(A.locator(".slm").count() == 0, "clicking a dropdown again closes its list")
+    A.focus("#freq")
+    A.keyboard.press("Enter")
+    A.wait_for_selector(".slm")
+    A.keyboard.press("Home"); A.keyboard.press("ArrowDown"); A.keyboard.press("Enter")
+    check(A.input_value("#freq") == "365", "the keyboard picks a choice (%s)" % A.input_value("#freq"))
+    A.keyboard.press("Enter"); A.wait_for_selector(".slm"); A.keyboard.press("Escape")
+    check(A.locator(".slm").count() == 0 and A.evaluate("document.activeElement.id") == "freq", "Escape closes the list and returns to the dropdown")
+    A.click("#freq"); A.click(".slm li:has-text('One-time')")
+    check(A.input_value("#freq") == "0" and A.is_hidden("#endw"), "picking from the list acts like changing the select: Ends after goes away")
+    A.click("#gear"); A.click("#mode"); A.wait_for_selector(".slm")
+    check(A.is_visible("#opt"), "opening a dropdown inside Settings leaves Settings open")
+    A.keyboard.press("Escape")
+    check(A.is_visible("#opt"), "and Escape closes only the list")
+    A.click("#optx")
+    profile(A)
+    A.click("#pay"); A.wait_for_selector(".slm")
+    over = A.evaluate("""(() => { const r = document.querySelector('.slm li').getBoundingClientRect(); return !!document.elementFromPoint(r.left + 5, r.top + 5).closest('.slm') })()""")
+    check(over, "a dropdown's list shows above the Profile window")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click(".slm li:has-text('14.5')")
+    check(data_of(A)["data"]["payments"] == 14.5 and A.is_visible("#pfov"), "picking there saves, and Profile stays open")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.select_option("#pay", "12")
+    A.click("#pfx")
+    A.wait_for_timeout(300)
+    T_ctx = browser.new_context(viewport={"width": 390, "height": 800}, has_touch=True, is_mobile=True, bypass_csp=True)
+    T = T_ctx.new_page()
+    T.goto(BASE); T.wait_for_selector("#fmf"); T.fill("#fm_u", "admin"); T.fill("#fm_p", "adminpass123"); T.tap("#fmo"); T.wait_for_selector("#fmm", state="hidden")
+    r = T.locator("#freq").bounding_box()
+    T.touchscreen.tap(r["x"] + r["width"] / 2, r["y"] + r["height"] / 2)
+    T.wait_for_selector(".slm")
+    h = T.eval_on_selector(".slm li", "e => e.getBoundingClientRect().height")
+    w = T.evaluate("(() => { const r = document.querySelector('.slm').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth })()")
+    check(h >= 44 and w, "on a touch screen a tap opens the list: rows at least 44px, inside the screen (%s)" % h)
+    T.tap(".slm li:has-text('Weekly')")
+    check(T.input_value("#freq") == "52", "and a tap picks a choice")
+    T_ctx.close()
+    check(A.evaluate("""[...document.styleSheets].some(s => [...s.cssRules].some(r => (r.selectorText || '').includes('input[list]::-webkit-calendar-picker-indicator') && r.style.display === 'none'))"""), "the rule that hides the Tags box's dropdown arrow is in place")
+
     # ---- import from Excel: columns guessed from the headings, row without an amount skipped, Undo takes it all back
     A.set_input_files("#xlf", os.path.join(os.path.dirname(os.path.abspath(__file__)), "expenses-sample.xlsx"))
     A.wait_for_selector("#xlm:not([hidden]) .xls")
@@ -368,6 +429,15 @@ with sync_playwright() as pw:
     A.reload()
     A.wait_for_selector("#fmm", state="hidden")
     check(A.is_visible(".slot[data-card='trend']"), "a card ticked in View stays shown after reloading")
+    # folding Spending by month is remembered, like the other cards
+    tf = '.slot[data-card="trend"] .head h2 > button.foldb'
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click(tf)
+    A.reload()
+    A.wait_for_selector("#fmm", state="hidden")
+    check(A.get_attribute(tf, "aria-expanded") == "false", "a folded Spending by month stays folded after reloading")
+    with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+        A.click(tf)
     A.click("#viewb")
     A.click("#viewp [data-view='trend']")
     A.click("#viewx")
@@ -467,6 +537,93 @@ with sync_playwright() as pw:
     check("Maria only" not in names(A), "users cannot see each other's data")
     check(C.evaluate("fetch('/api/admin/users').then(r=>r.status)") == 403, "a normal user cannot use the admin API")
 
+    # ---- merging a backup also brings reminders and paid VAT periods, without doubling what is here
+    def saved_after(page, act):
+        with page.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
+            act()
+        return data_of(page)["data"]
+    def merge_file(doc):
+        return {"name": "backup.json", "mimeType": "application/json", "buffer": json.dumps(doc).encode()}
+    backup = {"items": [{"id": "it1", "name": "Car repairs", "amt": 150, "freq": 0, "cat": "Other", "date": "2030-01-10", "created": "2026-01-01"}],
+              "rems": [{"id": "r1", "cat": "Electricity", "name": "Electricity", "date": "2030-02-15", "rep": "m", "day": 15},
+                       {"id": "r2", "cat": "Other", "name": "Car repairs", "date": "2030-01-05", "rep": "once", "item": "it1"},
+                       {"id": "r3", "cat": "Other", "name": "Ghost", "date": "2030-01-05", "rep": "once", "item": "not-here"}],
+              "fl": {"vat": {"paid": {"2026-Q1": True}}}}
+    d = saved_after(C, lambda: C.set_input_files("#mgf", merge_file(backup)))
+    check(sorted(r["id"] for r in d["rems"]) == ["r1", "r2"], "merge adds reminders, but not one whose expense is missing (%s)" % d["rems"])
+    check(d["fl"]["vat"]["paid"] == {"2026-Q1": True}, "merge adds paid VAT periods")
+    C.wait_for_timeout(400)
+    backup["rems"][0]["id"] = "r9"  # the same bill under another id
+    backup["items"].append({"id": "it2", "name": "New one", "amt": 5, "freq": 0, "cat": "Other", "date": "2030-01-11", "created": "2026-01-01"})
+    d = saved_after(C, lambda: C.set_input_files("#mgf", merge_file(backup)))
+    check(sorted(r["id"] for r in d["rems"]) == ["r1", "r2"], "merging again does not double the reminders (%s)" % d["rems"])
+    C.wait_for_timeout(400)
+
+    # ---- Clear all takes the reminders tied to those expenses with it, and Undo brings them back
+    C.click("#clear")
+    d = saved_after(C, lambda: C.click("#dlgy"))
+    check(d["items"] == [] and [r["id"] for r in d["rems"]] == ["r1"], "Clear all also removes reminders tied to the expenses (%s)" % d["rems"])
+    d = saved_after(C, lambda: C.click("#toastu"))
+    check(len(d["items"]) > 0 and sorted(r["id"] for r in d["rems"]) == ["r1", "r2"], "Undo brings the expenses and their reminders back (%s)" % d["rems"])
+    C.wait_for_timeout(400)
+
+    # ---- renaming a category carries its learned names and own merchants along
+    C.fill("#amt", "4"); C.fill("#name", "Corner shop")
+    C.click("#ddb"); C.click("#ddm button:has-text('Leisure')")
+    C.select_option("#freq", "0")
+    saved_after(C, lambda: C.click("#sb"))
+    C.wait_for_timeout(400)
+    C.click("#mrt"); C.fill("#mrq", "My Own Shop")
+    C.select_option("#mrnc", "Leisure")
+    saved_after(C, lambda: C.click('#mrl [data-ml="new"]'))
+    C.wait_for_timeout(400)
+    C.click("#mrt")
+    C.click("#cadd")
+    C.click('#cl .crow:has-text("Leisure") [data-ce]')
+    C.fill("#cn", "Fun")
+    d = saved_after(C, lambda: C.click("#cs"))
+    check(d["learn"].get("corner shop", {}).get("c") == "Fun", "a learned name follows the category's new name (%s)" % d["learn"].get("corner shop"))
+    check([m["c"] for m in d["mer"].values() if m.get("u")] == ["Fun"], "an own merchant follows the category's new name")
+    C.click("#cadd")
+    C.wait_for_timeout(400)
+
+    # ---- every message the server can send has Greek
+    js = C.evaluate("fetch('/app.js').then(r=>r.text())")
+    for m in ["Please sign in.", "Please choose a new password first.", "Not found.", "Not allowed.", "Bad request.", "Your data was changed on another device.", "Blocked: wrong origin.", "Blocked: missing header.", "That folder already has Cent-aur data.", "Something went wrong on this PC."]:
+        check('"%s":"' % m in js, "Greek exists for: %s" % m)
+
+    # ---- the health check says nothing about the version; a faked X-Forwarded-Proto does not change the cookie
+    check(C.evaluate("fetch('/api/health').then(r=>r.json())") == {"ok": True}, "the health check does not tell the version")
+    api = pw.request.new_context()
+    r = api.post(BASE + "api/login", headers={"X-Requested-With": "CentAur", "X-Forwarded-Proto": "https"}, data={"username": "maria", "password": "mariapass123"})
+    cookie = r.headers.get("set-cookie", "")
+    check(r.ok and "ca_session" in cookie and "secure" not in cookie.lower(), "X-Forwarded-Proto from just anyone is not believed (%s)" % cookie.split(";", 1)[-1])
+    api.dispose()
+
+    # ---- the page runs under a policy that allows no inline scripts at all (the page's own part is ready for it)
+    Z_ctx = browser.new_context()
+    Z = Z_ctx.new_page()
+    strict = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
+    def with_strict(route):
+        res = route.fetch()
+        route.fulfill(response=res, headers={**res.headers, "content-security-policy": strict})
+    Z.route(BASE, with_strict)
+    bad = []
+    Z.on("console", lambda m: bad.append(m.text) if m.type == "error" and "Content Security Policy" in m.text else None)
+    Z.on("pageerror", lambda e: bad.append(str(e)))
+    calls2 = []
+    Z.on("request", lambda r: "/api/" in r.url and calls2.append(r.url.split("/api/")[1]))
+    Z.goto(BASE)
+    Z.fill("#fm_u", "maria"); Z.fill("#fm_p", "mariapass123"); Z.click("#fmo")
+    Z.wait_for_selector("#fmm", state="hidden")
+    Z.reload()
+    Z.wait_for_selector("#fmm", state="hidden")
+    check(not bad, "no inline script is needed: nothing is blocked by a strict policy (%s)" % bad[:2])
+    check(calls2[-1:] == ["session?data=1"], "under it the page still asks the server once (%s)" % calls2)
+    ran = Z.evaluate("(() => { const s = document.createElement('script'); s.textContent = 'window.__inl = 1'; document.head.appendChild(s); return !!window.__inl })()")
+    check(not ran, "the strict policy really was in force: an inline script is blocked")
+    Z_ctx.close()
+
     A.click('[data-ac="usrm"]')
     A.wait_for_selector(".usrr")
     A.click('.usrr:has(b:text-is("maria")) [data-um="act"]')
@@ -490,6 +647,11 @@ with sync_playwright() as pw:
     A.click("#langb"); A.click('#langm [data-l="el"]')
     A.wait_for_timeout(300)
     check(A.text_content("#act") == "Λογαριασμός", "account block is translated")
+    A.click("#gear")
+    A.wait_for_selector("#freel", state="visible")
+    size = A.eval_on_selector("#freel", "e => { const r = e.getBoundingClientRect(); return [r.width, r.height] }")
+    check(size[0] == size[1] and size[0] >= 13, "in Greek the long label does not squeeze the freelancer checkbox away (%s)" % size)
+    A.click("#optx")
 
     check(not errors, "no script errors: %s" % errors)
     browser.close()

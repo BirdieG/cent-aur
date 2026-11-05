@@ -16,7 +16,7 @@ RewriteRule ^api/ api.php [L,QSA]
   # The page only talks to this server; pictures may also be built-in data: images
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
   # Always ask the server for these, so a new version is seen at once
-  <FilesMatch "^(index\.html|app\.js|manifest\.webmanifest)$">
+  <FilesMatch "^(index\.html|boot\.js|app\.js|manifest\.webmanifest)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
