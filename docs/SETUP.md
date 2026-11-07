@@ -97,6 +97,13 @@ with the new password.
 Upload the new files over the old ones. Everyone gets the new version the next time they open or
 reload the page. **Do not delete `cent-aur-data`.**
 
+If your server runs PHP through PHP-FPM, restart it after uploading, because it can keep running the
+old `api.php` until then, and restarting Apache does not clear that. Use your control panel, or for
+example `sudo systemctl restart php8.3-fpm` (change the number to your PHP version).
+
+To check the update, sign in and open `/api/session` on your site: `"version"` should show the new
+version.
+
 ## Optional settings
 
 Copy `config.sample.php` to `config.php` (it is never served to visitors) to set:
