@@ -2285,6 +2285,11 @@ accBoot();
   window.addEventListener("scroll",later,{passive:true});window.addEventListener("resize",later);
   if(window.ResizeObserver){var ro=new ResizeObserver(later);els().forEach(function(el){ro.observe(el)})}
   update()})();
+// scrolling lists: a gap between the rows and the scrollbar, only while a scrollbar takes up room (overlay scrollbars take none).
+// Most lists are drawn anew with the page, so new ones are picked up as they appear
+if(window.ResizeObserver)(function(){var seen=new WeakSet(),ro=new ResizeObserver(function(es){es.forEach(function(e){var el=e.target;el.classList.toggle("sbar",el.offsetWidth>el.clientWidth)})});
+  function watch(){document.querySelectorAll(".scl").forEach(function(el){if(!seen.has(el)){seen.add(el);ro.observe(el)}})}
+  watch();new MutationObserver(watch).observe(document.querySelector("main"),{childList:true,subtree:true})})();
 // dropdowns: the browser's own list of options cannot be styled (some systems draw it translucent and blurred), so it is drawn here.
 // The <select> stays the real control: it holds the value, sends the change events and takes keyboard focus. On touch screens CSS lets taps pass through it.
 (function(){var pn=null,sel=null,cur=-1,at=0,buf="",bt=0,fine=!window.matchMedia||matchMedia("(pointer:fine)").matches;

@@ -141,7 +141,7 @@ details{border-top:1px solid var(--line);padding:4px 0}
 /* three columns: the whole right column stays in place (like the left one), so Insights needs no rule of its own */
 @media (min-width:1240px){.slot[data-card="insights"]{position:static}}
 body.editing .slot[data-card="insights"]{position:static;max-height:none;overflow:visible}
-.scl{--rh:71px;max-height:calc(10*var(--rh));overflow-y:auto;scrollbar-width:thin}.scl.s{--rh:57px}
+.scl{--rh:71px;max-height:calc(10*var(--rh));overflow-y:auto;scrollbar-width:thin}.scl.s{--rh:57px}.scl.sbar{padding-right:12px}
 body.fulllists .scl{max-height:none;overflow:visible}
 .ph{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:56px;padding:10px 0;border-top:1px solid var(--line);position:relative;color:var(--muted);font-size:.85rem}
 .ph::after{content:"";position:absolute;left:0;bottom:0;height:2px;background:var(--accent);animation:phb 5s linear forwards}@keyframes phb{from{width:100%}to{width:0}}
@@ -224,8 +224,8 @@ details[open]>summary::before{transform:rotate(90deg)}
 .more{margin:6px 0 8px;padding:5px 14px;font-size:.85rem;color:var(--accent);border-color:var(--accent);background:none}
 .tabs[hidden]{display:none}
 .tabs{display:flex;gap:6px;margin:0 0 16px;border-bottom:1px solid var(--line)}
-/* without the Personal / Freelancer tabs the cards start where they would below them (the header's 6px, 43px tabs and 16px; the header's margin folds into this one) */
-.tabs[hidden]+.cols{margin-top:65px}
+/* without the Personal / Freelancer tabs the cards sit closer to the header, to gain height (the header's margin folds into this one) */
+.tabs[hidden]+.cols{margin-top:32px}
 .tab{background:none;border:none;border-bottom:3px solid transparent;border-radius:0;padding:8px 16px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:-1px}
 .tab.on{color:var(--text);border-bottom-color:var(--accent)}
 .cols[hidden],#flview[hidden]{display:none!important}
