@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/app-icons/logo.webp" width="96" height="96" alt="Cent-aur logo">
+  <img src="public/app-icons/logo.webp" width="78" height="78" alt="Cent-aur logo">
 </p>
 
 <h1 align="center">Cent-aur</h1>
@@ -141,13 +141,17 @@ public/
 ├── .htaccess             sends /api/... to api.php, security headers, caching
 ├── config.sample.php     optional settings (copy to config.php)
 ├── manifest.webmanifest  "Add to Home Screen" details
-└── app-icons/            logo and icons
+├── app-icons/            logo and icons
+└── vendor/              ApexCharts 4.7.0 (MIT), which draws Spending by month
 
 desktop/                  the Windows app (Go): window, local server, offline database, build.sh
 ```
 
-- **No dependencies.** No framework, no package manager and no build step: the files in `public/`
-  are exactly what the browser and PHP run.
+- **No dependencies to install.** No framework, no package manager and no build step: the files in `public/`
+  are exactly what the browser and PHP run. The one outside library, [ApexCharts](https://apexcharts.com/)
+  4.7.0 for the Spending by month chart, is a single file in `public/vendor/` (with its MIT licence),
+  served by your own server and loaded only when that card is shown. Later ApexCharts versions are no
+  longer MIT-licensed, so stay on 4.7.0 unless the licence fits how you share Cent-aur.
 - **One document per user.** After sign-in the page loads the user's data as one JSON document and
   saves it back after every change. Each save carries a revision number, so if another device saved in
   between, the server refuses with `409` and the page loads the latest version instead of

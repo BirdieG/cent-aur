@@ -429,6 +429,15 @@ with sync_playwright() as pw:
     A.reload()
     A.wait_for_selector("#fmm", state="hidden")
     check(A.is_visible(".slot[data-card='trend']"), "a card ticked in View stays shown after reloading")
+    # the chart is drawn by ApexCharts from this server's own copy, and only once the card is shown
+    A.wait_for_selector("#trapx svg.apexcharts-svg")
+    src = A.evaluate("[...document.scripts].map(s => s.src).filter(s => s.includes('apexcharts'))")
+    check(len(src) == 1 and src[0].startswith(BASE) and src[0].endswith("vendor/apexcharts-4.7.0.min.js"), "Spending by month is drawn with the local ApexCharts (%s)" % src)
+    check(A.evaluate("document.querySelectorAll('#trapx .apexcharts-xaxis-label').length") == 12, "the chart names all 12 months")
+    ax = A.request.get(BASE + "vendor/apexcharts-4.7.0.min.js", headers={"Accept-Encoding": "gzip"})
+    check(ax.headers.get("content-encoding") == "gzip" and "immutable" in ax.headers.get("cache-control", ""), "ApexCharts is sent compressed and kept by the browser (%s, %s)" % (ax.headers.get("content-encoding"), ax.headers.get("cache-control")))
+    dr = A.request.get(BASE + "api/data", headers={"Accept-Encoding": "gzip", "X-Requested-With": "CentAur"})
+    check(dr.ok and dr.headers.get("content-encoding") == "gzip", "your data from /api/data is sent compressed (%s)" % dr.headers.get("content-encoding"))
     # folding Spending by month is remembered, like the other cards
     tf = '.slot[data-card="trend"] .head h2 > button.foldb'
     with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
@@ -438,6 +447,8 @@ with sync_playwright() as pw:
     check(A.get_attribute(tf, "aria-expanded") == "false", "a folded Spending by month stays folded after reloading")
     with A.expect_response(lambda r: "/api/data" in r.url and r.request.method == "PUT" and r.ok):
         A.click(tf)
+    A.wait_for_function("document.querySelector('#trapx svg.apexcharts-svg') && document.querySelector('#trapx svg.apexcharts-svg').getBoundingClientRect().width > 100")
+    check(True, "unfolded again, the chart is drawn at full width")
     A.click("#viewb")
     A.click("#viewp [data-view='trend']")
     A.click("#viewx")

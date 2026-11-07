@@ -7,6 +7,11 @@ RewriteRule ^api/ api.php [L,QSA]
 <Files "config.php">
   Require all denied
 </Files>
+# Compress text on the way out: the page, the scripts and above all your data from /api, which shrinks about 5 times
+# (needs mod_deflate, standard on Virtualmin; skipped quietly if it is missing). Pictures are already compressed.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml
+</IfModule>
 # Browser protection (needs mod_headers, standard on Virtualmin; skipped quietly if it is missing)
 <IfModule mod_headers.c>
   # No other website may show Cent-aur inside a frame (stops click-tricks on the admin screen)
@@ -18,5 +23,9 @@ RewriteRule ^api/ api.php [L,QSA]
   # Always ask the server for these, so a new version is seen at once
   <FilesMatch "^(index\.html|boot\.js|app\.js|manifest\.webmanifest)$">
     Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # The chart library has its version in its name, so the browser keeps it for a year without asking again
+  <FilesMatch "^apexcharts-[0-9.]+\.min\.js$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>

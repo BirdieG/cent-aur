@@ -815,6 +815,8 @@ function applyTheme(){
   try{localStorage.setItem("xpence-theme",JSON.stringify(t))}catch(e){}
   // Safari tints its bars with theme-color: give it the page background of this theme and mode
   var tc=document.querySelector('meta[name="theme-color"]');if(tc&&document.body)tc.setAttribute("content",getComputedStyle(document.body).backgroundColor);
+  // a chart already on screen is drawn again in the new colours
+  if(typeof trChart!=="undefined"&&trChart)renderTrend();
   deskTitleBar(dark)}
 // the desktop app's window title bar takes the page's background and text colours (ceTitleBar is given to the page by the app)
 // links that open a new tab: in the desktop app they open in the PC's own browser instead
@@ -2116,7 +2118,6 @@ $("xly").addEventListener("click",function(){var add=XL&&XL.plan?XL.plan.add:[];
 
 var trY=null,trSel=null,TR3_EN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],TR3_EL=["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
 function trAxis(v){return v>=1000?(Math.round(v/100)/10)+"k":String(Math.round(v))}
-function trNice(m){if(m<=0)return 100;var p=Math.pow(10,Math.floor(Math.log10(m))),f=m/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
 function trCats(i){var by={},ls=LS().items;for(var k=0;k<ls.length;k++){var a=monthAmt(ls[k],i);if(a>0){var c=catOf(ls[k].cat),g=(c&&c.group)||ls[k].cat;by[g]=(by[g]||0)+a}}
   return Object.keys(by).map(function(k){return {n:k,v:by[k]}}).sort(function(a,b){return b.v-a.v})}
 function trDetail(i){
@@ -2128,50 +2129,89 @@ function trDetail(i){
   var cs=trCats(i).slice(0,3);if(cs.length)h+='<br>'+t("Biggest: ","Μεγαλύτερα: ")+cs.map(function(c){return esc(cn(c.n))+' '+fmt(c.v)}).join(' · ');
   if(!sp)h+='<br>'+t("No expenses in this month.","Δεν υπάρχουν έξοδα αυτόν τον μήνα.");
   el.innerHTML=h}
-function trPick(i){trSel=i;var g=document.querySelector("#trc .guide"),s=document.querySelector("#trc .trsvg");
-  if(g&&s){var x=+s.querySelector('.hit[data-m="'+(i%12)+'"]').getAttribute("data-cx");g.setAttribute("x1",x);g.setAttribute("x2",x);g.style.opacity=.35}trDetail(i)}
+/* the chart itself is ApexCharts (public/vendor, MIT, version 4.7.0 — later versions are no longer MIT); it is loaded only
+   once the card is shown. The year, Line/Bars, the details under the chart and the table stay the app's own. */
+var APEXV="4.7.0",trChart=null,trKey="";
+function apexLoad(cb){if(window.ApexCharts){cb();return}var q=apexLoad.q||(apexLoad.q=[]);q.push(cb);if(q.length>1)return;
+  var s=document.createElement("script");s.src="vendor/apexcharts-"+APEXV+".min.js";
+  s.onload=function(){var w=apexLoad.q;apexLoad.q=[];w.forEach(function(f){f()})};
+  s.onerror=function(){apexLoad.q=[];s.remove();var b=$("trapx");if(b)b.textContent=X("The chart could not be loaded. Check your connection.","Το γράφημα δεν φορτώθηκε. Ελέγξτε τη σύνδεσή σας.")};
+  document.head.appendChild(s)}
+function trFade(c,a){var m=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);if(!m)return c;var h=m[1];if(h.length===3)h=h.replace(/./g,"$&$&");
+  return "rgba("+parseInt(h.slice(0,2),16)+","+parseInt(h.slice(2,4),16)+","+parseInt(h.slice(4,6),16)+","+a+")"}
+function trYear(){return trY==null?Math.floor(idxOf(today())/12):trY}
+// the chosen month's name under the chart is drawn in the accent colour, bold
+function trMark(){var ls=document.querySelectorAll("#trapx .apexcharts-xaxis-label");
+  Array.prototype.forEach.call(ls,function(l,m){var on=trSel!=null&&m===trSel%12;l.classList.toggle("sel",on)})}
+function trPick(i){var Y=trYear();if(Math.floor(i/12)!==Y)return;trSel=i;trMark();trDetail(i)}
 function renderTrend(){
-  var box=$("trc");if(!box||state.simple)return;
-  var t=X,cur=idxOf(today()),S=LS(),Y=trY==null?Math.floor(cur/12):trY,type=state.trend==="bar"?"bar":"line";
-  var sp=[],bu=[],mx=0,i,m;
-  for(m=0;m<12;m++){i=Y*12+m;sp.push(sumM(i));bu.push(budgetOf(S,i));mx=Math.max(mx,sp[m],bu[m])}
-  var stp=trNice(mx*1.05/4),nt=Math.max(1,Math.ceil(mx*1.05/stp)),top=stp*nt,W=600,H=210,ml=40,mr=8,mt=10,mb=24,pw=W-ml-mr,ph=H-mt-mb,sl=pw/12;
-  function X_(m){return ml+sl*(m+.5)}function Y_(v){return mt+ph-(v/top)*ph}
-  var sv='<svg class="trsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(t("Spending by month, ","Έξοδα ανά μήνα, ")+Y)+'">';
-  for(var k=0;k<=nt;k++){var v=stp*k,y=Y_(v);sv+='<line class="gl" x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(ml-6)+'" y="'+(y+4)+'" text-anchor="end">'+trAxis(v)+'</text>'}
-  var TR3=LANG==="el"?TR3_EL:TR3_EN;
-  for(m=0;m<12;m++){var cm=Y*12+m===cur;sv+='<text class="'+(cm?'cur':'')+'" x="'+X_(m)+'" y="'+(H-7)+'" text-anchor="middle">'+TR3[m]+'</text>'}
-  var bd=bu.some(function(v){return v>0});
-  if(bd){var p="";for(m=0;m<12;m++){if(bu[m]>0){var yy=Y_(bu[m]);p+=(p&&bu[m-1]>0?"L":"M")+(ml+sl*m)+" "+yy+"L"+(ml+sl*(m+1))+" "+yy}}sv+='<path class="bud" d="'+p+'"/>'}
-  var hasOver=false;
-  if(type==="bar"){var bw=Math.min(34,sl*.62);
-    for(m=0;m<12;m++){if(sp[m]<=0)continue;var h=Math.max(2,(sp[m]/top)*ph),ov=bu[m]>0&&sp[m]>bu[m];if(ov)hasOver=true;
-      sv+='<path class="bar'+(ov?' ov':'')+(Y*12+m>cur?' pj':'')+'" d="M'+(X_(m)-bw/2)+' '+(mt+ph)+'V'+(mt+ph-h+4)+'Q'+(X_(m)-bw/2)+' '+(mt+ph-h)+' '+(X_(m)-bw/2+4)+' '+(mt+ph-h)+'H'+(X_(m)+bw/2-4)+'Q'+(X_(m)+bw/2)+' '+(mt+ph-h)+' '+(X_(m)+bw/2)+' '+(mt+ph-h+4)+'V'+(mt+ph)+'Z"/>'}}
-  else{var seg="",segP="",last=-1;
-    for(m=0;m<12;m++){var fut=Y*12+m>cur,pt=X_(m)+" "+Y_(sp[m]);
-      if(!fut){seg+=(seg?"L":"M")+pt;last=m}
-      else if(sp[m]>0){if(!segP){segP=last>=0?"M"+X_(last)+" "+Y_(sp[last])+"L"+pt:"M"+pt}else segP+="L"+pt}}
-    if(seg)sv+='<path class="ln" d="'+seg+'"/>';if(segP)sv+='<path class="ln pj" d="'+segP+'"/>';
-    for(m=0;m<12;m++){var f2=Y*12+m>cur,ov2=!f2&&bu[m]>0&&sp[m]>bu[m];if(ov2)hasOver=true;if(sp[m]<=0&&f2)continue;
-      sv+='<circle class="pt'+(ov2?' ov':'')+(f2?' pj':'')+'" cx="'+X_(m)+'" cy="'+Y_(sp[m])+'" r="4"/>'}}
-  sv+='<line class="guide" x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ph)+'"/>';
-  for(m=0;m<12;m++){sv+='<rect class="hit" data-m="'+m+'" data-cx="'+X_(m)+'" x="'+(ml+sl*m)+'" y="'+mt+'" width="'+sl+'" height="'+ph+'" tabindex="0" role="button" aria-label="'+esc((LANG==="el"?EL_M[m]:MN(Y*12+m))+": "+fmt(sp[m]))+'"/>'}
-  sv+='</svg>';
+  var box=$("trc");if(!box||state.simple)return;var sl=box.closest(".slot");if(sl&&sl.hidden){if(trChart){trChart.destroy();trChart=null}trKey="";return}
+  var t=X,cur=idxOf(today()),S=LS(),Y=trYear(),type=state.trend==="bar"?"bar":"line";
+  var sp=[],bu=[],i,m;
+  for(m=0;m<12;m++){i=Y*12+m;sp.push(sumM(i));bu.push(budgetOf(S,i))}
+  var bd=bu.some(function(v){return v>0}),any=sp.some(function(v){return v>0}),hasOver=false;
+  for(m=0;m<12;m++)if(Y*12+m<=cur&&bu[m]>0&&sp[m]>bu[m])hasOver=true;
+  var cs=getComputedStyle(document.documentElement),cv=function(n){return cs.getPropertyValue(n).trim()},
+    C={acc:cv("--accent"),dan:cv("--danger"),mut:cv("--muted"),line:cv("--line"),text:cv("--text"),card:cv("--card")};
+  var key=JSON.stringify([Y,type,cur,sp,bu,C,LANG,isDark()]);
+  if(key===trKey&&trChart&&$("trapx")&&$("trapx").firstChild)return;
+  trKey=key;if(trChart){trChart.destroy();trChart=null}
   var hd='<div class="trh"><span class="yr"><button type="button" data-try="-1" aria-label="'+t("Previous year","Προηγούμενο έτος")+'">◀</button>'+Y+'<button type="button" data-try="1" aria-label="'+t("Next year","Επόμενο έτος")+'">▶</button></span>'+
     '<span class="seg"><button type="button" data-trt="line" aria-pressed="'+(type==="line")+'">'+t("Line","Γραμμή")+'</button><button type="button" data-trt="bar" aria-pressed="'+(type==="bar")+'">'+t("Bars","Μπάρες")+'</button></span></div>';
   var lg='<div class="trleg"><span><i></i>'+t("Spent","Έξοδα")+'</span>'+(bd?'<span><i class="b"></i>'+t("Budget","Προϋπολογισμός")+'</span>':'')+(hasOver?'<span><i class="o"></i>'+t("Over budget","Πάνω από τον προϋπολογισμό")+'</span>':'')+'</div>';
   var tb='<details class="trtab"><summary>'+t("Show as table","Εμφάνιση ως πίνακα")+'</summary><table><thead><tr><th>'+t("Month","Μήνας")+'</th><th>'+t("Spent","Έξοδα")+'</th><th>'+t("Budget","Προϋπολογισμός")+'</th></tr></thead><tbody>';
   for(m=0;m<12;m++)tb+='<tr><td>'+esc(LANG==="el"?EL_M[m]:MN(Y*12+m))+'</td><td>'+fmt(sp[m])+'</td><td>'+(bu[m]>0?fmt(bu[m]):"–")+'</td></tr>';
   tb+='</tbody></table></details>';
-  var any=sp.some(function(v){return v>0});
-  box.innerHTML=hd+(any||bd?lg+sv+'<div class="trd" id="trd" aria-live="polite"></div>'+tb:'<div class="empty">'+t("Add some expenses to see how your spending changes month to month.","Προσθέστε έξοδα για να δείτε πώς αλλάζουν οι δαπάνες σας από μήνα σε μήνα.")+'</div>');
-  if(any||bd){var pick=trSel!=null&&Math.floor(trSel/12)===Y?trSel:(Y===Math.floor(cur/12)?cur:Y*12+11);trPick(pick)}}
-document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("#trc [data-try],#trc [data-trt],#trc .hit");if(!b)return;
-  if(b.hasAttribute("data-try")){var c=trY==null?Math.floor(idxOf(today())/12):trY;trY=c+ +b.getAttribute("data-try");trSel=null;renderTrend()}
-  else if(b.hasAttribute("data-trt")){state.trend=b.getAttribute("data-trt");save();renderTrend()}
-  else{var Y=trY==null?Math.floor(idxOf(today())/12):trY;trPick(Y*12+ +b.getAttribute("data-m"))}});
-document.addEventListener("mouseover",function(e){var b=e.target.closest&&e.target.closest("#trc .hit");if(b){var Y=trY==null?Math.floor(idxOf(today())/12):trY;trPick(Y*12+ +b.getAttribute("data-m"))}});
-document.addEventListener("focusin",function(e){var b=e.target.classList&&e.target.classList.contains("hit")&&e.target.closest("#trc");if(b){var Y=trY==null?Math.floor(idxOf(today())/12):trY;trPick(Y*12+ +e.target.getAttribute("data-m"))}});
+  var tabOpen=box.querySelector(".trtab")&&box.querySelector(".trtab").open;
+  if(!any&&!bd){box.innerHTML=hd+'<div class="empty">'+t("Add some expenses to see how your spending changes month to month.","Προσθέστε έξοδα για να δείτε πώς αλλάζουν οι δαπάνες σας από μήνα σε μήνα.")+'</div>';return}
+  // the chart gets a box of its own: ApexCharts redraws whenever its parent changes size, and the details under it change height on every hover
+  box.innerHTML=hd+lg+'<div class="trwrap"><div class="trapx" id="trapx" tabindex="0" role="img" aria-label="'+esc(t("Spending by month, ","Έξοδα ανά μήνα, ")+Y+t(". Use the left and right arrows to go through the months.",". Με τα βέλη αριστερά και δεξιά περνάτε από μήνα σε μήνα."))+'"></div></div><div class="trd" id="trd" aria-live="polite"></div>'+tb;
+  if(tabOpen)box.querySelector(".trtab").open=true;
+  var pick=trSel!=null&&Math.floor(trSel/12)===Y?trSel:(Y===Math.floor(cur/12)?cur:Y*12+11);trDetail(pick);trSel=pick;
+  apexLoad(function(){var el=$("trapx");if(!el||trKey!==key)return;
+    var TR3=LANG==="el"?TR3_EL:TR3_EN,fut=function(m){return Y*12+m>cur},bud=bu.map(function(v){return v>0?v:null}),series,colors,stroke,disc=[];
+    if(type==="bar"){
+      series=[{name:t("Spent","Έξοδα"),type:"column",data:sp.map(function(v){return v>0?+v.toFixed(2):null})}];
+      colors=[function(o){var m=o.dataPointIndex;return fut(m)?trFade(C.acc,.4):bu[m]>0&&sp[m]>bu[m]?C.dan:C.acc}];
+      stroke={width:[0],dashArray:[0],curve:["straight"]}}
+    else{
+      var last=-1,past=[],proj=[];for(m=0;m<12;m++){if(!fut(m)){past.push(+sp[m].toFixed(2));proj.push(null);last=m}else{past.push(null);proj.push(sp[m]>0?+sp[m].toFixed(2):null)}}
+      if(last>=0&&proj.some(function(v){return v!=null}))proj[last]=past[last];
+      series=[{name:t("Spent","Έξοδα"),type:"line",data:past},{name:t("Expected","Αναμενόμενα"),type:"line",data:proj}];
+      colors=[C.acc,C.acc];stroke={width:[2.5,2],dashArray:[0,4],curve:["straight","straight"]};
+      for(m=0;m<=last;m++)if(bu[m]>0&&sp[m]>bu[m])disc.push({seriesIndex:0,dataPointIndex:m,fillColor:C.dan,strokeColor:C.card,size:5})}
+    if(bd){series.push({name:t("Budget","Προϋπολογισμός"),type:"line",data:bud});colors.push(C.mut);stroke.width.push(1.5);stroke.dashArray.push(5);stroke.curve.push("stepline")}
+    var still=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+    trChart=new ApexCharts(el,{
+      chart:{type:"line",height:230,background:"transparent",foreColor:C.mut,fontFamily:"inherit",parentHeightOffset:0,
+        toolbar:{show:false},zoom:{enabled:false},selection:{enabled:false},animations:{enabled:!still,speed:300},
+        events:{
+          mouseMove:function(e,c,o){if(o&&o.dataPointIndex>=0)trPick(Y*12+o.dataPointIndex)},
+          click:function(e,c,o){if(o&&o.dataPointIndex>=0)trPick(Y*12+o.dataPointIndex)},
+          dataPointMouseEnter:function(e,c,o){trPick(Y*12+o.dataPointIndex)},
+          mounted:trMark,updated:trMark}},
+      theme:{mode:isDark()?"dark":"light"},
+      series:series,colors:colors,stroke:stroke,
+      fill:{opacity:1},
+      plotOptions:{bar:{columnWidth:"58%",borderRadius:4,borderRadiusApplication:"end"}},
+      markers:{size:type==="bar"?0:bd?[4,4,0]:[4,4],strokeColors:C.card,strokeWidth:2,hover:{sizeOffset:2},discrete:disc},
+      dataLabels:{enabled:false},legend:{show:false},
+      grid:{borderColor:C.line,strokeDashArray:0,padding:{left:4,right:8,top:0}},
+      xaxis:{categories:TR3,axisBorder:{color:C.line},axisTicks:{show:false},tooltip:{enabled:false},crosshairs:{stroke:{color:C.text,width:1,dashArray:0}},
+        labels:{rotate:0,hideOverlappingLabels:false,trim:false,style:{fontSize:el.clientWidth<480?"10px":"11px",colors:TR3.map(function(x,m){return Y*12+m===cur?C.text:C.mut})}}},
+      yaxis:{min:0,forceNiceScale:true,tickAmount:4,labels:{formatter:function(v){return trAxis(v)},style:{fontSize:"11px"}}},
+      tooltip:{shared:true,intersect:false,theme:isDark()?"dark":"light",
+        x:{formatter:function(v,o){var m=o&&o.dataPointIndex>=0?o.dataPointIndex:TR3.indexOf(v);return esc((LANG==="el"?EL_M[m]:MN(Y*12+m))+" "+Y)}},
+        y:{formatter:function(v){return v==null?"–":fmt(v)}}},
+      // no hover filter: ApexCharts rebuilds an SVG filter on every bar the mouse passes, which flickers; the column band and the tooltip show the month
+      states:{hover:{filter:{type:"none"}},active:{filter:{type:"none"}}}});
+    trChart.render().then(trMark)})}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("#trc [data-try],#trc [data-trt]");if(!b)return;
+  if(b.hasAttribute("data-try")){trY=trYear()+ +b.getAttribute("data-try");trSel=null;renderTrend()}
+  else{state.trend=b.getAttribute("data-trt");save();renderTrend()}});
+// keyboard: with the chart focused, the arrows go through the months
+document.addEventListener("keydown",function(e){if(!e.target.closest||!e.target.closest("#trapx")||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight"))return;
+  e.preventDefault();var Y=trYear(),i=trSel==null?Y*12:trSel+(e.key==="ArrowRight"?1:-1);trPick(Math.max(Y*12,Math.min(Y*12+11,i)))});
 
 /* ===== View (optional cards) + What if ===== */
 function applyView(){if(!document.querySelector)return;var sh=state.show||{};

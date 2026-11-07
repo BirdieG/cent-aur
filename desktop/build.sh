@@ -9,12 +9,12 @@ set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
 server=${1:-https://cent-aur.com/}
-version=2.0.4
+version=2.0.5
 
 # The program serves the page from inside itself: copy it from public/ (api.php stays out).
 rm -rf "$here/web"
 mkdir -p "$here/web"
-for f in index.html boot.js app.js manifest.webmanifest app-icons; do cp -R "$root/public/$f" "$here/web/"; done
+for f in index.html boot.js app.js manifest.webmanifest app-icons vendor; do cp -R "$root/public/$f" "$here/web/"; done
 
 docker volume create centaur-go-cache >/dev/null
 docker run --rm -v "$root:/src" -v centaur-go-cache:/go -w /src/desktop \
